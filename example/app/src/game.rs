@@ -349,7 +349,7 @@ impl Game {
 
     /// The "SPEED UP! ×n" callout: during a tier-up Round Break, the
     /// multiplier of the incoming tier.
-    pub fn speed_up(&self) -> Option<u32> {
+    pub fn speed_up_callout(&self) -> Option<u32> {
         match self.state {
             State::RoundBreak { .. } => {
                 let next = tier_for_round(self.round + 1);
@@ -386,9 +386,9 @@ impl Game {
     }
 
     /// The Death Freeze has lifted: land on Game Over, and — only when this
-    /// Run's final Score beats the stored High Score — write the record,
-    /// once. A Run abandoned mid-flight (the shell quitting) never gets
-    /// here, so it can never pollute the record.
+    /// Run's final Score beats the stored High Score — write it, once. A
+    /// Run abandoned mid-flight (the shell quitting) never gets here, so
+    /// it can never pollute the High Score.
     fn finish_run(&mut self) {
         self.new_high_score = self.score > self.high_score;
         if self.new_high_score {
@@ -400,18 +400,26 @@ impl Game {
         self.state = State::GameOver;
     }
 
+    /// The current tier's Watch tempo: (flash, gap).
+    fn tempo(&self) -> (Duration, Duration) {
+        let (flash_ms, gap_ms) = TIER_TEMPO_MS[(tier_for_round(self.round) - 1) as usize];
+        (
+            Duration::from_millis(flash_ms),
+            Duration::from_millis(gap_ms),
+        )
+    }
+
     fn watch_flash(&self) -> Duration {
-        let (flash_ms, _) = TIER_TEMPO_MS[(tier_for_round(self.round) - 1) as usize];
-        Duration::from_millis(flash_ms)
+        self.tempo().0
     }
 
     fn watch_gap(&self) -> Duration {
-        let (_, gap_ms) = TIER_TEMPO_MS[(tier_for_round(self.round) - 1) as usize];
-        Duration::from_millis(gap_ms)
+        self.tempo().1
     }
 
-    /// One uniformly-random Step. `next_u64() & 3` is exactly uniform over
-    /// the four Pads because 2^64 divides evenly by 4.
+    /// One uniformly-random Step. `next_u64() & 3` spreads the xorshift
+    /// stream evenly across the four Pads (the PRNG's missing zero state
+    /// skews this by ~2⁻⁶² — far below anything observable).
     fn random_step(&mut self) -> Pad {
         match self.rng.next_u64() & 3 {
             0 => Pad::Up,
@@ -760,7 +768,7 @@ mod tests {
         let sequence = observe_watch(&mut game, &mut now);
         game.press(sequence[0], now);
         assert_eq!(game.phase(), Phase::RoundBreak);
-        assert_eq!(game.speed_up(), None);
+        assert_eq!(game.speed_up_callout(), None);
         advance_to_watch(&mut game, &mut now);
         while game.round() < 4 {
             play_round(&mut game, &mut now);
@@ -772,13 +780,13 @@ mod tests {
             game.press(pad, now);
         }
         assert_eq!(game.phase(), Phase::RoundBreak);
-        assert_eq!(game.speed_up(), Some(2));
+        assert_eq!(game.speed_up_callout(), Some(2));
         advance_ms(&mut game, &mut now, 1300);
         assert_eq!(game.phase(), Phase::RoundBreak, "stretched past 800 ms");
         advance_ms(&mut game, &mut now, 300);
         assert_eq!(game.phase(), Phase::Watch);
         assert_eq!(game.round(), 5);
-        assert_eq!(game.speed_up(), None);
+        assert_eq!(game.speed_up_callout(), None);
     }
 
     #[test]
@@ -940,14 +948,14 @@ mod tests {
         crate::highscore::save(&dir, 50);
         let mut game = Game::new(42, Some(dir.clone()));
         let mut now = Instant::now();
-        // A Run that dies at 0 doesn't touch the record or celebrate.
+        // A Run that dies at 0 doesn't touch the High Score or celebrate.
         start_run(&mut game, &mut now);
         die_now(&mut game, &mut now);
         assert_eq!(game.score(), 0);
         assert!(!game.new_high_score());
         assert_eq!(game.high_score(), 50);
         assert_eq!(crate::highscore::load(&dir), 50);
-        // A Run that beats the record writes it and celebrates: Rounds 1–3
+        // A Run that beats the High Score writes it and celebrates: Rounds 1–3
         // score 10 + 20 + 30 = 60 > 50.
         game.start(now);
         advance_ms(&mut game, &mut now, 1100);
@@ -959,7 +967,7 @@ mod tests {
         assert!(game.new_high_score());
         assert_eq!(game.high_score(), 60);
         assert_eq!(crate::highscore::load(&dir), 60);
-        // Matching (not beating) the record is no event.
+        // Matching (not beating) the High Score is no event.
         game.start(now);
         advance_ms(&mut game, &mut now, 1100);
         for _ in 1..=3 {
@@ -972,7 +980,7 @@ mod tests {
     }
 
     #[test]
-    fn a_run_in_flight_never_touches_the_record() {
+    fn a_run_in_flight_never_touches_the_high_score() {
         let dir = crate::highscore::temp_data_dir("mid-run");
         let mut game = Game::new(42, Some(dir.clone()));
         let mut now = Instant::now();

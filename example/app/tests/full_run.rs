@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 
 use simon_says::{Game, Mistake, Pad, Phase, highscore};
 
-/// A fresh temp data dir so the test can never touch the real record.
+/// A fresh temp data dir so the test can never touch the real High Score.
 fn temp_data_dir() -> PathBuf {
     let dir = std::env::temp_dir().join(format!("simon-says-full-run-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -53,6 +53,14 @@ fn observe_watch(game: &mut Game, now: &mut Instant) -> Vec<Pad> {
     panic!("Watch never ended");
 }
 
+/// Any Pad that isn't the expected Step.
+fn wrong_pad(expected: Pad) -> Pad {
+    [Pad::Up, Pad::Down, Pad::Left, Pad::Right]
+        .into_iter()
+        .find(|pad| *pad != expected)
+        .unwrap()
+}
+
 /// Tick through whatever break is in progress until the next Watch begins.
 fn advance_to_watch(game: &mut Game, now: &mut Instant) {
     for _ in 0..10_000 {
@@ -71,7 +79,7 @@ fn a_full_run_from_first_flash_to_game_over() {
     let mut game = Game::new(42, Some(dir.clone()));
     let mut now = Instant::now();
 
-    // Launch: Title over the board, stats at rest, no record yet.
+    // Launch: Title over the board, stats at rest, no High Score yet.
     assert_eq!(game.phase(), Phase::Title);
     assert_eq!(game.high_score(), 0);
 
@@ -105,7 +113,7 @@ fn a_full_run_from_first_flash_to_game_over() {
         if round == 4 {
             // The Round Break into tier ×2 carries the callout.
             assert_eq!(game.phase(), Phase::RoundBreak);
-            assert_eq!(game.speed_up(), Some(2));
+            assert_eq!(game.speed_up_callout(), Some(2));
         }
         advance_to_watch(&mut game, &mut now);
     }
@@ -117,18 +125,14 @@ fn a_full_run_from_first_flash_to_game_over() {
     // naming the Mistake and revealing what was owed, into Game Over.
     assert_eq!(game.round(), 6);
     let sequence = observe_watch(&mut game, &mut now);
-    let wrong = [Pad::Up, Pad::Down, Pad::Left, Pad::Right]
-        .into_iter()
-        .find(|pad| *pad != sequence[0])
-        .unwrap();
-    game.press(wrong, now);
+    game.press(wrong_pad(sequence[0]), now);
     assert_eq!(game.phase(), Phase::DeathFreeze);
     assert_eq!(game.mistake(), Some(Mistake::WrongPad));
     assert_eq!(game.lit_pad(), Some(sequence[0]));
     advance_ms(&mut game, &mut now, 1100);
 
     // Game Over reports the Run: Score 200, ROUND 6 · TIER ×2, and the
-    // beaten record — written once, as literal plain text.
+    // beaten High Score — written once, as literal plain text.
     assert_eq!(game.phase(), Phase::GameOver);
     assert_eq!(game.score(), 200);
     assert_eq!(game.round(), 6);
@@ -140,17 +144,13 @@ fn a_full_run_from_first_flash_to_game_over() {
         "200\n"
     );
 
-    // One more go, straight from Game Over: dying at 0 leaves the record
-    // untouched and uncelebrated.
+    // One more go, straight from Game Over: dying at 0 leaves the High
+    // Score untouched and uncelebrated.
     game.start(now);
     assert_eq!(game.phase(), Phase::GetReady);
     advance_to_watch(&mut game, &mut now);
     let sequence = observe_watch(&mut game, &mut now);
-    let wrong = [Pad::Up, Pad::Down, Pad::Left, Pad::Right]
-        .into_iter()
-        .find(|pad| *pad != sequence[0])
-        .unwrap();
-    game.press(wrong, now);
+    game.press(wrong_pad(sequence[0]), now);
     advance_ms(&mut game, &mut now, 1100);
     assert_eq!(game.phase(), Phase::GameOver);
     assert!(!game.new_high_score());

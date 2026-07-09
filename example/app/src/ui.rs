@@ -133,7 +133,7 @@ fn draw_hub(frame: &mut Frame, area: Rect, game: &Game) {
             mistake_text(mistake),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
         )
-    } else if let Some(multiplier) = game.speed_up() {
+    } else if let Some(multiplier) = game.speed_up_callout() {
         Line::styled(
             format!("SPEED UP! ×{multiplier}"),
             Style::default()
@@ -259,8 +259,8 @@ fn draw_title_overlay(frame: &mut Frame, board: Rect) {
 fn draw_game_over_overlay(frame: &mut Frame, board: Rect, game: &Game) {
     let area = centered(board, 44, 9);
     frame.render_widget(Clear, area);
-    // Beating the record is an event: the overlay celebrates it.
-    let record = if game.new_high_score() {
+    // Beating the High Score is an event: the overlay celebrates it.
+    let celebration = if game.new_high_score() {
         Line::styled(
             "★ NEW HIGH SCORE! ★",
             Style::default()
@@ -277,7 +277,7 @@ fn draw_game_over_overlay(frame: &mut Frame, board: Rect, game: &Game) {
                 "G A M E   O V E R",
                 Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             ),
-            record,
+            celebration,
             Line::from(format!("SCORE  {}", game.score())),
             Line::from(format!(
                 "ROUND {} · TIER ×{}",
