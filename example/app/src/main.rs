@@ -10,7 +10,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
-use simon_says::Game;
+use simon_says::{Game, Pad};
 
 const TICK: Duration = Duration::from_millis(33);
 
@@ -46,6 +46,11 @@ impl App {
     fn on_key(&mut self, code: KeyCode) {
         match code {
             KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => self.exit = true,
+            KeyCode::Enter => self.game.start(Instant::now()),
+            KeyCode::Up => self.game.press(Pad::Up, Instant::now()),
+            KeyCode::Down => self.game.press(Pad::Down, Instant::now()),
+            KeyCode::Left => self.game.press(Pad::Left, Instant::now()),
+            KeyCode::Right => self.game.press(Pad::Right, Instant::now()),
             _ => {}
         }
     }

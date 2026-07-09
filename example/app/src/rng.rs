@@ -19,10 +19,6 @@ impl XorShift64 {
         }
     }
 
-    #[expect(
-        dead_code,
-        reason = "walking skeleton: first drawn on by the sequence-growth slice"
-    )]
     pub(crate) fn next_u64(&mut self) -> u64 {
         let mut x = self.state;
         x ^= x << 13;

@@ -31,6 +31,7 @@ struct PadStyle {
     glyph: &'static str,
     name: &'static str,
     color: Color,
+    flood: Color,
 }
 
 fn pad_style(pad: Pad) -> PadStyle {
@@ -39,21 +40,25 @@ fn pad_style(pad: Pad) -> PadStyle {
             glyph: "▲",
             name: "UP",
             color: Color::Rgb(0, 110, 45),
+            flood: Color::Rgb(70, 255, 120),
         },
         Pad::Down => PadStyle {
             glyph: "▼",
             name: "DOWN",
             color: Color::Rgb(140, 115, 0),
+            flood: Color::Rgb(255, 235, 80),
         },
         Pad::Left => PadStyle {
             glyph: "◀",
             name: "LEFT",
             color: Color::Rgb(150, 25, 25),
+            flood: Color::Rgb(255, 95, 85),
         },
         Pad::Right => PadStyle {
             glyph: "▶",
             name: "RIGHT",
             color: Color::Rgb(25, 50, 160),
+            flood: Color::Rgb(105, 155, 255),
         },
     }
 }
@@ -66,6 +71,8 @@ pub fn render(frame: &mut Frame, game: &Game) {
     draw_sidebar(frame, sidebar, game);
     match game.phase() {
         Phase::Title => draw_title_overlay(frame, board),
+        Phase::GameOver => draw_game_over_overlay(frame, board, game),
+        Phase::Watch | Phase::Echo => {}
     }
 }
 
@@ -81,7 +88,7 @@ fn draw_board(frame: &mut Frame, area: Rect, game: &Game) {
             .areas(*row);
         for (cell_index, cell) in cells.iter().enumerate() {
             match CROSS[row_index][cell_index] {
-                Cell::Pad(pad) => draw_pad(frame, *cell, pad),
+                Cell::Pad(pad) => draw_pad(frame, *cell, pad, game.lit_pad() == Some(pad)),
                 Cell::Hub => draw_hub(frame, *cell, game),
                 Cell::Empty => {}
             }
@@ -89,16 +96,28 @@ fn draw_board(frame: &mut Frame, area: Rect, game: &Game) {
     }
 }
 
-fn draw_pad(frame: &mut Frame, area: Rect, pad: Pad) {
-    let PadStyle { glyph, name, color } = pad_style(pad);
+/// A Pad is outlined (colored border, dark interior) at rest and floods
+/// solid with its bright color on flash — unlit Pads are never dimmed.
+fn draw_pad(frame: &mut Frame, area: Rect, pad: Pad, lit: bool) {
+    let PadStyle {
+        glyph,
+        name,
+        color,
+        flood,
+    } = pad_style(pad);
+    let style = if lit {
+        Style::default().bg(flood).fg(Color::Black)
+    } else {
+        Style::default().fg(color)
+    };
     let block = Block::bordered()
         .title(format!(" {name} "))
-        .border_style(Style::default().fg(color));
+        .border_style(style);
     let content = center_vertically(area.height.saturating_sub(2), vec![Line::from(glyph)]);
     frame.render_widget(
         Paragraph::new(content)
             .alignment(Alignment::Center)
-            .style(Style::default().fg(color))
+            .style(style)
             .block(block),
         area,
     );
@@ -218,6 +237,36 @@ fn draw_title_overlay(frame: &mut Frame, board: Rect) {
     );
 }
 
+/// The end-of-Run overlay: the Run's result, and Enter for a zero-friction
+/// fresh Run (never back via the Title).
+fn draw_game_over_overlay(frame: &mut Frame, board: Rect, game: &Game) {
+    let area = centered(board, 44, 9);
+    frame.render_widget(Clear, area);
+    let content = center_vertically(
+        area.height.saturating_sub(2),
+        vec![
+            Line::styled(
+                "G A M E   O V E R",
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+            ),
+            Line::raw(""),
+            Line::from(format!("SCORE  {}", game.score())),
+            Line::raw(""),
+            Line::styled(
+                "ENTER  play again   ·   Q / ESC  quit",
+                Style::default().fg(Color::DarkGray),
+            ),
+        ],
+    );
+    frame.render_widget(
+        Paragraph::new(content)
+            .alignment(Alignment::Center)
+            .style(Style::default().bg(Color::Black).fg(Color::Gray))
+            .block(Block::bordered()),
+        area,
+    );
+}
+
 fn round_text(game: &Game) -> String {
     // Round 0 means no Run is underway yet.
     if game.round() == 0 {
@@ -230,6 +279,9 @@ fn round_text(game: &Game) -> String {
 fn phase_text(game: &Game) -> &'static str {
     match game.phase() {
         Phase::Title => "TITLE",
+        Phase::Watch => "WATCH",
+        Phase::Echo => "ECHO",
+        Phase::GameOver => "GAME OVER",
     }
 }
 
