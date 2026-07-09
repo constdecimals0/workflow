@@ -7,7 +7,7 @@ use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Clear, Paragraph};
-use simon_says::{Game, Pad, Phase};
+use simon_says::{Game, Mistake, Pad, Phase};
 
 const SIDEBAR_WIDTH: u16 = 22;
 
@@ -72,7 +72,7 @@ pub fn render(frame: &mut Frame, game: &Game) {
     match game.phase() {
         Phase::Title => draw_title_overlay(frame, board),
         Phase::GameOver => draw_game_over_overlay(frame, board, game),
-        Phase::Watch | Phase::Echo => {}
+        Phase::GetReady | Phase::Watch | Phase::Echo | Phase::RoundBreak | Phase::DeathFreeze => {}
     }
 }
 
@@ -126,6 +126,15 @@ fn draw_pad(frame: &mut Frame, area: Rect, pad: Pad, lit: bool) {
 /// The Hub reads out Round, Phase, and (in later slices) callouts at the
 /// center of the board.
 fn draw_hub(frame: &mut Frame, area: Rect, game: &Game) {
+    // At the Death Freeze the Hub names the Mistake in red; otherwise it
+    // reads out the Phase.
+    let callout = match game.mistake() {
+        Some(mistake) => Line::styled(
+            mistake_text(mistake),
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
+        None => Line::from(phase_text(game)),
+    };
     let content = center_vertically(
         area.height,
         vec![
@@ -133,7 +142,7 @@ fn draw_hub(frame: &mut Frame, area: Rect, game: &Game) {
                 format!("ROUND {}", round_text(game)),
                 Style::default().add_modifier(Modifier::BOLD),
             ),
-            Line::from(phase_text(game)),
+            callout,
         ],
     );
     frame.render_widget(
@@ -279,9 +288,19 @@ fn round_text(game: &Game) -> String {
 fn phase_text(game: &Game) -> &'static str {
     match game.phase() {
         Phase::Title => "TITLE",
+        Phase::GetReady => "GET READY",
         Phase::Watch => "WATCH",
         Phase::Echo => "ECHO",
+        Phase::RoundBreak => "ROUND BREAK",
+        Phase::DeathFreeze => "DEATH FREEZE",
         Phase::GameOver => "GAME OVER",
+    }
+}
+
+fn mistake_text(mistake: Mistake) -> &'static str {
+    match mistake {
+        Mistake::WrongPad => "WRONG PAD",
+        Mistake::TooSlow => "TOO SLOW",
     }
 }
 

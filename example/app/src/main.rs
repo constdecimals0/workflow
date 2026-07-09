@@ -5,23 +5,31 @@
 
 mod ui;
 
-use std::io;
+use std::io::{self, Write};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
-use simon_says::{Game, Pad};
+use simon_says::{Game, Pad, Phase};
 
 const TICK: Duration = Duration::from_millis(33);
 
 struct App {
     game: Game,
+    /// The phase after the previous key/tick, so the shell can spot the
+    /// transition into the Death Freeze — the bell's only ring.
+    last_phase: Phase,
     exit: bool,
 }
 
 impl App {
     fn new(game: Game) -> Self {
-        Self { game, exit: false }
+        let last_phase = game.phase();
+        Self {
+            game,
+            last_phase,
+            exit: false,
+        }
     }
 
     fn run(mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
@@ -39,8 +47,20 @@ impl App {
                 self.game.tick(Instant::now());
                 last_tick = Instant::now();
             }
+            self.ring_bell_on_death();
         }
         Ok(())
+    }
+
+    /// The terminal bell rings at the moment the Death Freeze begins — the
+    /// game's only sound — and nowhere else.
+    fn ring_bell_on_death(&mut self) {
+        let phase = self.game.phase();
+        if phase == Phase::DeathFreeze && self.last_phase != Phase::DeathFreeze {
+            print!("\x07");
+            let _ = io::stdout().flush();
+        }
+        self.last_phase = phase;
     }
 
     fn on_key(&mut self, code: KeyCode) {

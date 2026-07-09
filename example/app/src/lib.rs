@@ -9,4 +9,4 @@
 mod game;
 mod rng;
 
-pub use game::{Game, Pad, Phase};
+pub use game::{Game, Mistake, Pad, Phase};
