@@ -1,0 +1,3 @@
+# High Score persists as a plain-text integer via hand-rolled XDG lookup
+
+The example app's High Score is a single integer, stored as literal plain text (`12\n`) at `$XDG_DATA_HOME/simon-says/highscore`, falling back to `~/.local/share/simon-says/highscore`, with the XDG lookup hand-rolled in ~10 lines of std. We deliberately rejected `serde`/`serde_json` and the `dirs` crate — for a single number they buy nothing, and the example should demonstrate a minimal-dependency posture; don't "fix" this by adding them. The file is written once at game over, only when the Run's final Score beats the stored High Score. Persistence is best-effort and silent: a missing or corrupt file loads as 0, save errors are swallowed, and the scoreboard file can never crash the game.
