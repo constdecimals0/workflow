@@ -7,6 +7,7 @@
 //! randomness comes only from the seed passed to [`Game::new`].
 
 mod game;
+pub mod highscore;
 mod rng;
 
 pub use game::{Game, Mistake, Pad, Phase};

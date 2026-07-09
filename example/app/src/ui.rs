@@ -259,6 +259,17 @@ fn draw_title_overlay(frame: &mut Frame, board: Rect) {
 fn draw_game_over_overlay(frame: &mut Frame, board: Rect, game: &Game) {
     let area = centered(board, 44, 9);
     frame.render_widget(Clear, area);
+    // Beating the record is an event: the overlay celebrates it.
+    let record = if game.new_high_score() {
+        Line::styled(
+            "★ NEW HIGH SCORE! ★",
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+    } else {
+        Line::raw("")
+    };
     let content = center_vertically(
         area.height.saturating_sub(2),
         vec![
@@ -266,7 +277,7 @@ fn draw_game_over_overlay(frame: &mut Frame, board: Rect, game: &Game) {
                 "G A M E   O V E R",
                 Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             ),
-            Line::raw(""),
+            record,
             Line::from(format!("SCORE  {}", game.score())),
             Line::from(format!(
                 "ROUND {} · TIER ×{}",

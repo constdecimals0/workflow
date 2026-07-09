@@ -2,8 +2,10 @@
 //! Sudden Death. All animation is deadline state checked against the
 //! injected `now` each tick — no sleeps, no threads, no clock reads.
 
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
+use crate::highscore;
 use crate::rng::XorShift64;
 
 /// The beat between starting (or restarting) a Run and its first Watch.
@@ -136,20 +138,31 @@ pub struct Game {
     sequence: Vec<Pad>,
     score: u32,
     high_score: u32,
+    new_high_score: bool,
     round: u32,
+    data_dir: Option<PathBuf>,
 }
 
 impl Game {
     /// `seed` is the randomness seam: the only entropy the core ever sees.
     /// The shell seeds from `SystemTime`; tests pass a fixed value.
-    pub fn new(seed: u64) -> Self {
+    ///
+    /// `data_dir` is the persistence seam — the XDG data home the High
+    /// Score lives under. The shell passes [`highscore::data_dir`]; tests
+    /// pass a temp dir, or `None` to run without a scoreboard. The stored
+    /// High Score loads here, at launch, and a missing or unreadable file
+    /// silently loads as 0.
+    pub fn new(seed: u64, data_dir: Option<PathBuf>) -> Self {
+        let high_score = data_dir.as_deref().map(highscore::load).unwrap_or(0);
         Self {
             rng: XorShift64::new(seed),
             state: State::Title,
             sequence: Vec::new(),
             score: 0,
-            high_score: 0,
+            high_score,
+            new_high_score: false,
             round: 0,
+            data_dir,
         }
     }
 
@@ -166,6 +179,7 @@ impl Game {
             | State::DeathFreeze { .. } => return,
         }
         self.score = 0;
+        self.new_high_score = false;
         self.round = 1;
         self.sequence.clear();
         let step = self.random_step();
@@ -293,7 +307,7 @@ impl Game {
                     self.begin_next_round(until);
                 }
                 State::DeathFreeze { until, .. } if now >= until => {
-                    self.state = State::GameOver;
+                    self.finish_run();
                 }
                 _ => break,
             }
@@ -325,6 +339,12 @@ impl Game {
             State::DeathFreeze { mistake, .. } => Some(mistake),
             _ => None,
         }
+    }
+
+    /// True at Game Over when this Run's final Score beat the stored High
+    /// Score — the ★ NEW HIGH SCORE! ★ moment.
+    pub fn new_high_score(&self) -> bool {
+        self.new_high_score
     }
 
     /// The "SPEED UP! ×n" callout: during a tier-up Round Break, the
@@ -363,6 +383,21 @@ impl Game {
             lit: true,
             until: now + self.watch_flash(),
         };
+    }
+
+    /// The Death Freeze has lifted: land on Game Over, and — only when this
+    /// Run's final Score beats the stored High Score — write the record,
+    /// once. A Run abandoned mid-flight (the shell quitting) never gets
+    /// here, so it can never pollute the record.
+    fn finish_run(&mut self) {
+        self.new_high_score = self.score > self.high_score;
+        if self.new_high_score {
+            self.high_score = self.score;
+            if let Some(dir) = &self.data_dir {
+                highscore::save(dir, self.high_score);
+            }
+        }
+        self.state = State::GameOver;
     }
 
     fn watch_flash(&self) -> Duration {
@@ -416,7 +451,7 @@ mod tests {
     fn title_never_advances_on_its_own() {
         // No attract mode: the Title idles until the player acts, however
         // long the shell keeps ticking.
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let start = Instant::now();
         for tick in 0..120 {
             game.tick(start + Duration::from_millis(33 * tick));
@@ -444,7 +479,7 @@ mod tests {
 
     #[test]
     fn get_ready_beat_precedes_the_first_watch() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         game.start(now);
         // Starting a Run lands in a ~1 s Get Ready beat, nothing flashing...
@@ -487,7 +522,7 @@ mod tests {
 
     #[test]
     fn watch_flashes_the_sequence_then_flips_instantly_to_echo() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let started = now;
@@ -502,7 +537,7 @@ mod tests {
 
     #[test]
     fn input_is_locked_during_watch() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         // A stray press of every Pad during Watch must never cost the Run.
@@ -517,7 +552,7 @@ mod tests {
 
     #[test]
     fn completing_echo_grows_the_sequence_by_one_into_the_next_watch() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let round_one = observe_watch(&mut game, &mut now);
@@ -535,7 +570,7 @@ mod tests {
 
     #[test]
     fn echo_keypress_flashes_its_pad_as_confirmation() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let sequence = observe_watch(&mut game, &mut now);
@@ -557,7 +592,7 @@ mod tests {
 
     #[test]
     fn round_break_separates_a_completed_echo_from_the_next_watch() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let sequence = observe_watch(&mut game, &mut now);
@@ -578,7 +613,7 @@ mod tests {
 
     #[test]
     fn hesitating_past_the_echo_timeout_is_too_slow_sudden_death() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let sequence = observe_watch(&mut game, &mut now);
@@ -595,7 +630,7 @@ mod tests {
 
     #[test]
     fn each_correct_press_restarts_the_echo_timeout() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let sequence = observe_watch(&mut game, &mut now);
@@ -640,7 +675,7 @@ mod tests {
 
     #[test]
     fn speed_tiers_enter_at_rounds_1_5_9_13_and_the_top_tier_plateaus() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         for round in 1..=17 {
@@ -681,7 +716,7 @@ mod tests {
 
     #[test]
     fn watch_tempo_follows_the_tier_and_echo_timeout_does_not() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         play_round(&mut game, &mut now);
@@ -718,7 +753,7 @@ mod tests {
 
     #[test]
     fn tier_up_round_breaks_stretch_and_carry_the_speed_up_callout() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         // Rounds 1–3 end in plain 800 ms breaks with no callout.
@@ -748,7 +783,7 @@ mod tests {
 
     #[test]
     fn each_correct_step_scores_ten_times_the_tier_multiplier() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         assert_eq!(game.score(), 0);
@@ -786,7 +821,7 @@ mod tests {
 
     #[test]
     fn wrong_pad_is_sudden_death_through_the_death_freeze() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let sequence = observe_watch(&mut game, &mut now);
@@ -808,7 +843,7 @@ mod tests {
 
     #[test]
     fn enter_on_game_over_starts_a_fresh_run() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let sequence = observe_watch(&mut game, &mut now);
@@ -831,7 +866,7 @@ mod tests {
 
     #[test]
     fn enter_mid_run_is_ignored() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         game.start(now);
         // Enter during Get Ready must not restart the beat...
@@ -856,7 +891,7 @@ mod tests {
 
     #[test]
     fn runs_are_endless_and_steps_are_drawn_uniformly_from_all_pads() {
-        let mut game = Game::new(42);
+        let mut game = Game::new(42, None);
         let mut now = Instant::now();
         start_run(&mut game, &mut now);
         let mut sequence = Vec::new();
@@ -882,8 +917,81 @@ mod tests {
     }
 
     #[test]
+    fn high_score_loads_at_launch() {
+        let dir = crate::highscore::temp_data_dir("loads-at-launch");
+        crate::highscore::save(&dir, 50);
+        let game = Game::new(42, Some(dir.clone()));
+        assert_eq!(game.high_score(), 50);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Die on the current Round's first Step and ride the freeze into
+    /// Game Over.
+    fn die_now(game: &mut Game, now: &mut Instant) {
+        let sequence = observe_watch(game, now);
+        game.press(wrong_pad(sequence[0]), *now);
+        advance_ms(game, now, 1100);
+        assert_eq!(game.phase(), Phase::GameOver);
+    }
+
+    #[test]
+    fn game_over_writes_the_high_score_once_and_only_on_a_beat() {
+        let dir = crate::highscore::temp_data_dir("write-on-beat");
+        crate::highscore::save(&dir, 50);
+        let mut game = Game::new(42, Some(dir.clone()));
+        let mut now = Instant::now();
+        // A Run that dies at 0 doesn't touch the record or celebrate.
+        start_run(&mut game, &mut now);
+        die_now(&mut game, &mut now);
+        assert_eq!(game.score(), 0);
+        assert!(!game.new_high_score());
+        assert_eq!(game.high_score(), 50);
+        assert_eq!(crate::highscore::load(&dir), 50);
+        // A Run that beats the record writes it and celebrates: Rounds 1–3
+        // score 10 + 20 + 30 = 60 > 50.
+        game.start(now);
+        advance_ms(&mut game, &mut now, 1100);
+        for _ in 1..=3 {
+            play_round(&mut game, &mut now);
+        }
+        die_now(&mut game, &mut now);
+        assert_eq!(game.score(), 60);
+        assert!(game.new_high_score());
+        assert_eq!(game.high_score(), 60);
+        assert_eq!(crate::highscore::load(&dir), 60);
+        // Matching (not beating) the record is no event.
+        game.start(now);
+        advance_ms(&mut game, &mut now, 1100);
+        for _ in 1..=3 {
+            play_round(&mut game, &mut now);
+        }
+        die_now(&mut game, &mut now);
+        assert_eq!(game.score(), 60);
+        assert!(!game.new_high_score());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_run_in_flight_never_touches_the_record() {
+        let dir = crate::highscore::temp_data_dir("mid-run");
+        let mut game = Game::new(42, Some(dir.clone()));
+        let mut now = Instant::now();
+        start_run(&mut game, &mut now);
+        for _ in 1..=3 {
+            play_round(&mut game, &mut now);
+        }
+        // 60 points in and mid-Run: nothing on disk. A quit here (the
+        // shell just drops the Game) therefore discards the Run entirely.
+        assert_eq!(game.score(), 60);
+        assert_eq!(crate::highscore::load(&dir), 0);
+        drop(game);
+        assert_eq!(crate::highscore::load(&dir), 0);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn new_game_opens_at_title_with_zeroed_stats() {
-        let game = Game::new(42);
+        let game = Game::new(42, None);
         assert_eq!(game.phase(), Phase::Title);
         assert_eq!(game.score(), 0);
         assert_eq!(game.high_score(), 0);

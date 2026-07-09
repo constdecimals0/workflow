@@ -10,7 +10,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
-use simon_says::{Game, Pad, Phase};
+use simon_says::{Game, Pad, Phase, highscore};
 
 const TICK: Duration = Duration::from_millis(33);
 
@@ -89,5 +89,5 @@ fn main() -> io::Result<()> {
         .unwrap_or(1);
     // `ratatui::run` restores the terminal on both exit and panic, so the
     // shell is never left in raw mode.
-    ratatui::run(|terminal| App::new(Game::new(seed)).run(terminal))
+    ratatui::run(|terminal| App::new(Game::new(seed, highscore::data_dir())).run(terminal))
 }
