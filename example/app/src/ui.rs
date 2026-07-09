@@ -126,14 +126,22 @@ fn draw_pad(frame: &mut Frame, area: Rect, pad: Pad, lit: bool) {
 /// The Hub reads out Round, Phase, and (in later slices) callouts at the
 /// center of the board.
 fn draw_hub(frame: &mut Frame, area: Rect, game: &Game) {
-    // At the Death Freeze the Hub names the Mistake in red; otherwise it
-    // reads out the Phase.
-    let callout = match game.mistake() {
-        Some(mistake) => Line::styled(
+    // At the Death Freeze the Hub names the Mistake in red; on a tier-up
+    // Round Break it calls out the speed-up; otherwise it reads the Phase.
+    let callout = if let Some(mistake) = game.mistake() {
+        Line::styled(
             mistake_text(mistake),
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-        ),
-        None => Line::from(phase_text(game)),
+        )
+    } else if let Some(multiplier) = game.speed_up() {
+        Line::styled(
+            format!("SPEED UP! ×{multiplier}"),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )
+    } else {
+        Line::from(phase_text(game))
     };
     let content = center_vertically(
         area.height,
@@ -260,6 +268,11 @@ fn draw_game_over_overlay(frame: &mut Frame, board: Rect, game: &Game) {
             ),
             Line::raw(""),
             Line::from(format!("SCORE  {}", game.score())),
+            Line::from(format!(
+                "ROUND {} · TIER ×{}",
+                game.round(),
+                game.speed_tier()
+            )),
             Line::raw(""),
             Line::styled(
                 "ENTER  play again   ·   Q / ESC  quit",

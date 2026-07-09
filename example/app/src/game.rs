@@ -8,15 +8,31 @@ use crate::rng::XorShift64;
 
 /// The beat between starting (or restarting) a Run and its first Watch.
 const GET_READY: Duration = Duration::from_millis(1000);
-/// How long a Pad floods solid during Watch playback.
-const WATCH_FLASH: Duration = Duration::from_millis(450);
-/// The dark beat between two Watch flashes (also what separates a repeated
-/// Pad from one long flash).
-const WATCH_GAP: Duration = Duration::from_millis(120);
+/// Watch tempo (flash ms, gap ms) per Speed Tier, indexed by multiplier − 1.
+/// The flash is how long a Pad floods solid during playback; the gap is the
+/// dark beat between flashes (what separates a repeated Pad from one long
+/// flash).
+const TIER_TEMPO_MS: [(u64, u64); 4] = [(450, 120), (330, 100), (240, 80), (180, 60)];
 /// How long an Echo keypress flashes its Pad as confirmation.
 const ECHO_FLASH: Duration = Duration::from_millis(250);
 /// The pause between a completed Echo and the next Round's Watch.
 const ROUND_BREAK: Duration = Duration::from_millis(800);
+/// The stretched Round Break on tier-up Rounds, carrying the SPEED UP!
+/// callout.
+const TIER_UP_BREAK: Duration = Duration::from_millis(1500);
+/// Base points per correct Step, multiplied by the Speed Tier.
+const STEP_POINTS: u32 = 10;
+
+/// The Speed Tier (also the score multiplier, ×1–×4) in effect at `round`.
+/// Tiers enter at Rounds 1 / 5 / 9 / 13; the top tier plateaus.
+fn tier_for_round(round: u32) -> u32 {
+    match round {
+        0..=4 => 1,
+        5..=8 => 2,
+        9..=12 => 3,
+        _ => 4,
+    }
+}
 /// How long the player has to give each key during Echo — fixed across all
 /// tiers, so hesitation is part of the challenge.
 const ECHO_TIMEOUT: Duration = Duration::from_millis(3000);
@@ -176,16 +192,21 @@ impl Game {
             };
             return;
         }
+        // Judged correct: the Step scores immediately, at the current
+        // tier's multiplier.
+        self.score += STEP_POINTS * tier_for_round(self.round);
         let flash = Some(Flash {
             pad,
             until: now + ECHO_FLASH,
         });
         if expected + 1 == self.sequence.len() {
             // The Echo is complete: rest through the Round Break, the final
-            // confirmation flash playing out into it.
+            // confirmation flash playing out into it. Tier-up breaks
+            // stretch so the SPEED UP! callout can land.
+            let stretch = tier_for_round(self.round + 1) > tier_for_round(self.round);
             self.state = State::RoundBreak {
                 flash,
-                until: now + ROUND_BREAK,
+                until: now + if stretch { TIER_UP_BREAK } else { ROUND_BREAK },
             };
         } else {
             self.state = State::Echo {
@@ -207,7 +228,7 @@ impl Game {
                     self.state = State::Watch {
                         step: 0,
                         lit: true,
-                        until: until + WATCH_FLASH,
+                        until: until + self.watch_flash(),
                     };
                 }
                 State::Watch {
@@ -226,7 +247,7 @@ impl Game {
                         self.state = State::Watch {
                             step,
                             lit: false,
-                            until: until + WATCH_GAP,
+                            until: until + self.watch_gap(),
                         };
                     }
                 }
@@ -238,7 +259,7 @@ impl Game {
                     self.state = State::Watch {
                         step: step + 1,
                         lit: true,
-                        until: until + WATCH_FLASH,
+                        until: until + self.watch_flash(),
                     };
                 }
                 State::Echo {
@@ -306,6 +327,18 @@ impl Game {
         }
     }
 
+    /// The "SPEED UP! ×n" callout: during a tier-up Round Break, the
+    /// multiplier of the incoming tier.
+    pub fn speed_up(&self) -> Option<u32> {
+        match self.state {
+            State::RoundBreak { .. } => {
+                let next = tier_for_round(self.round + 1);
+                (next > tier_for_round(self.round)).then_some(next)
+            }
+            _ => None,
+        }
+    }
+
     pub fn phase(&self) -> Phase {
         match self.state {
             State::Title => Phase::Title,
@@ -328,8 +361,18 @@ impl Game {
         self.state = State::Watch {
             step: 0,
             lit: true,
-            until: now + WATCH_FLASH,
+            until: now + self.watch_flash(),
         };
+    }
+
+    fn watch_flash(&self) -> Duration {
+        let (flash_ms, _) = TIER_TEMPO_MS[(tier_for_round(self.round) - 1) as usize];
+        Duration::from_millis(flash_ms)
+    }
+
+    fn watch_gap(&self) -> Duration {
+        let (_, gap_ms) = TIER_TEMPO_MS[(tier_for_round(self.round) - 1) as usize];
+        Duration::from_millis(gap_ms)
     }
 
     /// One uniformly-random Step. `next_u64() & 3` is exactly uniform over
@@ -356,9 +399,10 @@ impl Game {
         self.round
     }
 
-    /// The Speed Tier's score multiplier (×1–×4).
+    /// The Speed Tier's score multiplier (×1–×4), following the current
+    /// Round; ×1 while no Run is underway.
     pub fn speed_tier(&self) -> u32 {
-        1
+        tier_for_round(self.round)
     }
 }
 
@@ -571,6 +615,167 @@ mod tests {
         assert_eq!(game.mistake(), Some(Mistake::TooSlow));
     }
 
+    /// Tick until the next Watch begins (through any Round Break, however
+    /// long), landing at most one 10 ms tick into its first flash.
+    fn advance_to_watch(game: &mut Game, now: &mut Instant) {
+        for _ in 0..10_000 {
+            if game.phase() == Phase::Watch {
+                return;
+            }
+            *now += Duration::from_millis(10);
+            game.tick(*now);
+        }
+        panic!("Watch never arrived");
+    }
+
+    /// Play the current Round correctly: watch, echo, and rest into the
+    /// next Round's Watch.
+    fn play_round(game: &mut Game, now: &mut Instant) {
+        let sequence = observe_watch(game, now);
+        for &pad in &sequence {
+            game.press(pad, *now);
+        }
+        advance_to_watch(game, now);
+    }
+
+    #[test]
+    fn speed_tiers_enter_at_rounds_1_5_9_13_and_the_top_tier_plateaus() {
+        let mut game = Game::new(42);
+        let mut now = Instant::now();
+        start_run(&mut game, &mut now);
+        for round in 1..=17 {
+            let expected_tier = match round {
+                1..=4 => 1,
+                5..=8 => 2,
+                9..=12 => 3,
+                // No fifth tier: 13 and beyond stay at ×4.
+                _ => 4,
+            };
+            assert_eq!(game.round(), round);
+            assert_eq!(game.speed_tier(), expected_tier, "round {round}");
+            play_round(&mut game, &mut now);
+        }
+    }
+
+    /// Measure the first Step's flash and gap at 1 ms ticks, returning
+    /// (flashed pad, flash ms, gap ms). Needs a Sequence of length ≥ 2 so a
+    /// gap follows the flash.
+    fn measure_watch_tempo(game: &mut Game, now: &mut Instant) -> (Pad, u64, u64) {
+        assert_eq!(game.phase(), Phase::Watch);
+        let pad = game.lit_pad().expect("Watch opens with its first flash");
+        let mut flash_ms = 0;
+        while game.lit_pad().is_some() {
+            *now += Duration::from_millis(1);
+            game.tick(*now);
+            flash_ms += 1;
+        }
+        let mut gap_ms = 0;
+        while game.lit_pad().is_none() {
+            assert_eq!(game.phase(), Phase::Watch, "gap must end in another flash");
+            *now += Duration::from_millis(1);
+            game.tick(*now);
+            gap_ms += 1;
+        }
+        (pad, flash_ms, gap_ms)
+    }
+
+    #[test]
+    fn watch_tempo_follows_the_tier_and_echo_timeout_does_not() {
+        let mut game = Game::new(42);
+        let mut now = Instant::now();
+        start_run(&mut game, &mut now);
+        play_round(&mut game, &mut now);
+        // (round to measure at, expected flash ms, expected gap ms)
+        let expectations = [(2, 450, 120), (5, 330, 100), (9, 240, 80), (13, 180, 60)];
+        for (at_round, flash_ms, gap_ms) in expectations {
+            while game.round() < at_round {
+                play_round(&mut game, &mut now);
+            }
+            let (first, measured_flash, measured_gap) = measure_watch_tempo(&mut game, &mut now);
+            // Allow the up-to-10 ms of observation slop advance_to_watch
+            // leaves before the measurement starts.
+            assert!(
+                measured_flash.abs_diff(flash_ms) <= 15,
+                "round {at_round}: flash {measured_flash} ms, want ~{flash_ms}"
+            );
+            assert!(
+                measured_gap.abs_diff(gap_ms) <= 15,
+                "round {at_round}: gap {measured_gap} ms, want ~{gap_ms}"
+            );
+            // Finish the Round: the measured flash plus the rest.
+            let mut sequence = vec![first];
+            sequence.extend(observe_watch(&mut game, &mut now));
+            // The Echo timeout stays 3.0 s at every tier: hesitate 2.9 s on
+            // the first key and live.
+            advance_ms(&mut game, &mut now, 2900);
+            assert_eq!(game.phase(), Phase::Echo, "round {at_round}");
+            for &pad in &sequence {
+                game.press(pad, now);
+            }
+            advance_to_watch(&mut game, &mut now);
+        }
+    }
+
+    #[test]
+    fn tier_up_round_breaks_stretch_and_carry_the_speed_up_callout() {
+        let mut game = Game::new(42);
+        let mut now = Instant::now();
+        start_run(&mut game, &mut now);
+        // Rounds 1–3 end in plain 800 ms breaks with no callout.
+        let sequence = observe_watch(&mut game, &mut now);
+        game.press(sequence[0], now);
+        assert_eq!(game.phase(), Phase::RoundBreak);
+        assert_eq!(game.speed_up(), None);
+        advance_to_watch(&mut game, &mut now);
+        while game.round() < 4 {
+            play_round(&mut game, &mut now);
+        }
+        // Round 4's break leads into tier ×2: stretched to ~1.5 s, calling
+        // out the speed-up.
+        let sequence = observe_watch(&mut game, &mut now);
+        for &pad in &sequence {
+            game.press(pad, now);
+        }
+        assert_eq!(game.phase(), Phase::RoundBreak);
+        assert_eq!(game.speed_up(), Some(2));
+        advance_ms(&mut game, &mut now, 1300);
+        assert_eq!(game.phase(), Phase::RoundBreak, "stretched past 800 ms");
+        advance_ms(&mut game, &mut now, 300);
+        assert_eq!(game.phase(), Phase::Watch);
+        assert_eq!(game.round(), 5);
+        assert_eq!(game.speed_up(), None);
+    }
+
+    #[test]
+    fn each_correct_step_scores_ten_times_the_tier_multiplier() {
+        let mut game = Game::new(42);
+        let mut now = Instant::now();
+        start_run(&mut game, &mut now);
+        assert_eq!(game.score(), 0);
+        // Rounds 1–4 at ×1: 10·1 + 10·2 + 10·3 + 10·4 = 100.
+        for _ in 1..=4 {
+            play_round(&mut game, &mut now);
+        }
+        assert_eq!(game.score(), 100);
+        // Round 5 at ×2 scores live, per correct Step.
+        let sequence = observe_watch(&mut game, &mut now);
+        game.press(sequence[0], now);
+        assert_eq!(game.score(), 120, "each Step lands the instant it's judged");
+        for &pad in &sequence[1..] {
+            game.press(pad, now);
+        }
+        assert_eq!(game.score(), 200);
+        // A Mistake ends the Run with the Score intact for the overlay.
+        advance_to_watch(&mut game, &mut now);
+        let sequence = observe_watch(&mut game, &mut now);
+        game.press(wrong_pad(sequence[0]), now);
+        advance_ms(&mut game, &mut now, 1100);
+        assert_eq!(game.phase(), Phase::GameOver);
+        assert_eq!(game.score(), 200);
+        assert_eq!(game.round(), 6);
+        assert_eq!(game.speed_tier(), 2);
+    }
+
     /// Any Pad that isn't the expected Step.
     fn wrong_pad(expected: Pad) -> Pad {
         [Pad::Up, Pad::Down, Pad::Left, Pad::Right]
@@ -662,7 +867,7 @@ mod tests {
             for &pad in &sequence {
                 game.press(pad, now);
             }
-            advance_ms(&mut game, &mut now, 900);
+            advance_to_watch(&mut game, &mut now);
         }
         // Thirty Rounds in and the Run is still going: no win cap.
         assert_eq!(game.phase(), Phase::Watch);
