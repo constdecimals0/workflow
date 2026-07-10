@@ -5,9 +5,12 @@ skills workflow — grill/wayfind → spec → tickets → implement → review 
 recreating a real run: the Simon Says terminal game (Rust) that lives in [`app/`](app/).
 
 Everything here happened. Every prompt you're told to type was typed in the real run,
-captured verbatim in the [run log](../context/example-run-log.md). Where the run hit
-friction, the tutorial says so instead of hiding it — the consolidated lessons live in
-the [run retrospective](../context/run-retrospective.md), cited throughout as
+captured verbatim in the [run log](../context/example-run-log.md) — the one exception,
+the close-out prompt, is flagged as the recommended form where it appears. (The log
+presents the run normalized to 18 sessions; this walkthrough's 15 are the run's real
+shape.) Where the run hit friction, the tutorial says so instead of hiding it — the
+consolidated lessons live in the
+[run retrospective](../context/run-retrospective.md), cited throughout as
 *Retro rule N*.
 
 ## What you'll practice
@@ -25,15 +28,19 @@ the [run retrospective](../context/run-retrospective.md), cited throughout as
 1. **Install the v1.1 skills:**
 
    ```bash
-   npx skills add mattpocock/skills
+   npx skills@latest add mattpocock/skills
    ```
 
-2. **Clean out lingering pre-1.1 skills.** After installing, check your skills folder
-   for leftovers — delete `review`, `to-prd`, and `to-issues` (both the
-   `~/.claude/skills/` symlink and its `~/.agents/skills/` target); keep `grill-me`,
-   which is the current v1.1 wrapper. The stale `review` skill is the dangerous one: its
-   trigger description is identical to `code-review`'s, so a generic "review this
-   branch" can silently run the old skill.
+   The installer is an interactive picker — make sure you select
+   `/setup-matt-pocock-skills`.
+
+2. **Only if this machine had a pre-1.1 install: clean out the lingering skills.**
+   Check your skills folder for leftovers — delete `review`, `to-prd`, and `to-issues`
+   (both the `~/.claude/skills/` symlink and its `~/.agents/skills/` target); keep
+   `grill-me`, which is the current v1.1 wrapper. The stale `review` skill is the
+   dangerous one: its trigger description is identical to `code-review`'s, so a generic
+   "review this branch" can silently run the old skill. On a fresh machine there is
+   nothing to delete.
 
 3. **Rust toolchain**, stable ≥ 1.88 (the example's manifest pins `rust-version = "1.88"`).
 
@@ -46,7 +53,8 @@ the [run retrospective](../context/run-retrospective.md), cited throughout as
 
 ## How to read this
 
-- Blockquoted prompts are what you type, verbatim from the run.
+- Blockquoted prompts are what you type — verbatim from the run, except the one
+  flagged as the recommended form (the close-out).
 - Each `## Session` heading is a fresh context — type `/clear` (or open a new terminal)
   at every session boundary, and *only* at session boundaries.
 - **What our run did** callouts report the real outcome, including the divergences.
@@ -56,8 +64,10 @@ the [run retrospective](../context/run-retrospective.md), cited throughout as
 ## Session 1 — chart the map
 
 Entry is always `/wayfinder` — even for work you suspect is small. Its no-fog escape
-hatch detects the small case for you and drops straight into `/to-spec`; don't pre-judge
-size yourself (*Retro rule 2*). Type your loose idea as the argument:
+hatch detects the small case for you: it stops and asks how you'd like to proceed, and
+the move is answering "go straight to `/to-spec`", which runs on the grilling still in
+context. Don't pre-judge size yourself (*Retro rule 2*). Type your loose idea as the
+argument:
 
 > /wayfinder I want a small, fun Simon Says game that runs in the terminal, written in Rust, living in example/app/ of this repo
 
@@ -85,8 +95,9 @@ stopped. `/clear`.
 
 The **frontier** is the map's open, unblocked, unclaimed tickets. Work them one per
 session, `/clear` between — our run carried seven tickets this way with no context
-trouble (*Retro rule 6*). You can run frontier tickets in parallel terminals, but read
-the friction note below first.
+trouble (*Retro rule 6*), packing them into these six numbered slots by running
+terminals in parallel: the AFK research ticket worked alongside the first grilling.
+You can run frontier tickets in parallel too, but read the friction note below first.
 
 ### The research ticket (AFK)
 
@@ -95,7 +106,7 @@ the friction note below first.
 > - Grilling: high-score persistence
 
 (The run pasted the frontier list from session 1's closing summary — naming what's
-takeable.) The agent chains into `/research` and works alone (~12 min in our run).
+takeable.) The agent reaches for `/research` and works alone (~12 min in our run).
 
 **Produced:** [`docs/research/ratatui-tick-driven-game.md`](../docs/research/ratatui-tick-driven-game.md)
 — crate versions, the tick + poll loop shape, flash timing — and the ticket closed.
@@ -162,13 +173,18 @@ one: **frontier empty — map complete.**
 
 ## Session 8 — plan: `/to-spec` → `/to-tickets`, one session
 
-Map done → `/clear` → a fresh session that loads the map and turns it into a spec and
-tickets. Type:
+Map done → `/clear` → a fresh session that turns the map into a spec and tickets. The
+reliable form passes the argument (*Retro rule 1*): `/to-spec <map-url>`, so the fresh
+session builds the spec from the map by instruction. Our run improvised instead and
+typed it bare:
 
 > /to-spec
 
-With no argument and a cleared context, the agent rebuilds from the repo: it finds the
-completed map and its closed tickets, and synthesizes the spec. Our run produced
+With no argument and a cleared context, the agent rebuilt from the repo — found the
+completed map and its closed tickets, and synthesized the spec. It held, but that was
+improvisation that happened to hold, not designed behavior: the skill's stated input is
+the live conversation, and nothing in it promises a rebuild. Pass the map URL. Our run
+produced
 [Spec: Simon Says terminal game](https://github.com/constdecimals0/workflow/issues/9) —
 33 user stories, labelled `ready-for-agent`.
 
@@ -210,8 +226,10 @@ and review:
 
 > /code-review
 
-Two review axes run as parallel agents — spec against the ticket, standards against the
-ADRs and `CONTEXT.md`. Fix the real findings the review produces pre-commit, and commit
+Two review axes run as parallel agents — spec against the ticket, standards against
+whatever documents how code should be written (here, the ADRs and `CONTEXT.md`), plus an
+always-on baseline of twelve classic Fowler code smells. Fix the real findings the
+review produces pre-commit, and commit
 green (`cargo test`, `clippy -D warnings`, `fmt --check`). Our run's session for #10 did
 exactly this: the reviews' findings were verified rather than blindly accepted, fixed,
 and folded into the ticket's commit.
@@ -250,9 +268,12 @@ and `/code-review`: the review reads the session's context, same session, pre-co
 ## Session 15 — the close-out
 
 Frontier empty = feature done. No skill closes the loop for you — the close-out is a
-prompt you type yourself (*Retro rule 4*):
+prompt you type yourself (*Retro rule 4*). The recommended form:
 
 > All tickets under spec #9 are closed — run the loop's close-out: close the spec and the map with comments linking the commits, and prune any prototypes and the effort's .scratch/.
+
+One honest note: that blockquote is the recommended form, not replayed history — the
+real run typed bare `/wayfinder`, and the close-out ran because a map ticket drove it.
 
 **What our run did:** the session closed spec #9 with a closing comment listing the
 per-ticket commits, then closed map #1 linking the spec. The board prototype had already
@@ -299,3 +320,12 @@ friction in the run traces to breaking one of these:
 6. **Trust the loop's session shape.** One ticket per session, review in the same
    session as the implementation, `/clear` on the settled boundaries. The run's only
    failures were departures from this — never the loop itself.
+
+## Next: a real work repo
+
+This tutorial ran the loop in a repo built to be looked at — everything committed to
+`main`, the map org-visible, the workflow's artifacts kept on display. On a work repo
+three things change: the feature gets a branch and a PR, the tracker becomes a
+deliberate choice, and the workflow's writings get gitignored. The README's
+[On a work repo](../README.md#on-a-work-repo) section is the transfer guide — reading
+ends there; the next step is running the loop on a repo of your own.
