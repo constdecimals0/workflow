@@ -571,10 +571,10 @@ const STEPS = [
       </div>
       <div class="simon-board">
         <button class="spad spad-up" data-color="green" aria-label="green pad — up arrow">▲</button>
-        <button class="spad spad-left" data-color="yellow" aria-label="yellow pad — left arrow">◀</button>
+        <button class="spad spad-left" data-color="red" aria-label="red pad — left arrow">◀</button>
         <div class="simon-hub" id="simon-hub">▶</div>
-        <button class="spad spad-right" data-color="red" aria-label="red pad — right arrow">▶</button>
-        <button class="spad spad-down" data-color="blue" aria-label="blue pad — down arrow">▼</button>
+        <button class="spad spad-right" data-color="blue" aria-label="blue pad — right arrow">▶</button>
+        <button class="spad spad-down" data-color="yellow" aria-label="yellow pad — down arrow">▼</button>
       </div>
       <div class="simon-msg" id="simon-msg">press start — watch the sequence, then echo it</div>
       <div class="simon-actions"><button class="btn next" id="simon-start">▶ start run</button></div>
