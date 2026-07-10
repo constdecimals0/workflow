@@ -135,7 +135,8 @@ per-machine.
 
 ## Learn more
 
-- **[The tutorial](example/tutorial.md)** — recreate the Simon Says app prompt-by-prompt.
+- **[The tutorial](example/tutorial.md)** — the Simon Says run as a prompt-along read;
+  rebuilding the game yourself is optional reps.
 - **[The run retrospective](context/run-retrospective.md)** — every divergence in the real run
   and what it teaches.
 - **[The run log](context/example-run-log.md)** — every prompt of all 18 sessions, session by session.

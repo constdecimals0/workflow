@@ -207,7 +207,22 @@ bodyEl.addEventListener("click", (e) => {
 const SIMON_KEY = "workflow-simon-high-score";
 const PAD_ORDER = ["green", "yellow", "red", "blue"];
 const PAD_KEYS = { green: "↑", yellow: "↓", red: "←", blue: "→" };
+// Timing, mirroring game.rs's decided constants.
+const TIER_TEMPO = [[0, 0], [450, 120], [330, 100], [240, 80], [180, 60]]; // (flash, gap) per tier
+const GET_READY_MS = 1000;
+const ROUND_BREAK_MS = 800;
+const TIER_UP_BREAK_MS = 1500;
+const WATCH_LEAD_IN_MS = 500;
+const ECHO_FLASH_MS = 250;
+const ECHO_TIMEOUT_MS = 3000;
+const DEATH_FREEZE_MS = 1000;
 let simon = null;
+
+// The Speed Tier (also the score multiplier) in effect at 1-indexed `round`:
+// tiers enter at rounds 1 / 5 / 9 / 13, top tier plateaus.
+function tierForRound(round) {
+  return Math.min(4, 1 + Math.floor((round - 1) / 4));
+}
 
 function simonActive() {
   return !!simon && ["getready", "watch", "echo", "break", "freeze"].includes(simon.phase);
@@ -263,14 +278,9 @@ function simonFlash(color, ms) {
   simonLater(() => pad.classList.remove("lit"), ms);
 }
 
-function simonTempo() {
-  // (flash ms, gap ms) per Speed Tier — game.rs TIER_TEMPO_MS.
-  return [[0, 0], [450, 120], [330, 100], [240, 80], [180, 60]][simon.tier];
-}
-
 function simonArmKeyTimeout() {
   clearTimeout(simon.keyTimer);
-  simon.keyTimer = setTimeout(() => simonMistake(true), 3000);
+  simon.keyTimer = setTimeout(() => simonMistake(true), ECHO_TIMEOUT_MS);
   simon.timers.push(simon.keyTimer);
 }
 
@@ -284,33 +294,33 @@ function simonStart() {
   s.els.hub.textContent = "★";
   s.els.msg.textContent = "get ready…";
   simonStats();
-  simonLater(simonNextRound, 1000);
+  simonLater(simonNextRound, GET_READY_MS);
 }
 
 function simonNextRound() {
   const s = simon;
   s.round++;
-  s.tier = Math.min(4, 1 + Math.floor((s.round - 1) / 4));
+  s.tier = tierForRound(s.round);
   s.seq.push(PAD_ORDER[Math.floor(Math.random() * PAD_ORDER.length)]);
   s.pos = 0;
   s.phase = "watch";
   s.els.hub.textContent = s.round;
   s.els.msg.textContent = "watch…";
   simonStats();
-  const [flash, gap] = simonTempo();
+  const [flash, gap] = TIER_TEMPO[s.tier];
   const step = flash + gap;
-  s.seq.forEach((color, n) => simonLater(() => simonFlash(color, flash), 500 + n * step));
+  s.seq.forEach((color, n) => simonLater(() => simonFlash(color, flash), WATCH_LEAD_IN_MS + n * step));
   simonLater(() => {
     s.phase = "echo";
     s.els.msg.textContent = "echo!";
     simonArmKeyTimeout();
-  }, 500 + s.seq.length * step);
+  }, WATCH_LEAD_IN_MS + s.seq.length * step);
 }
 
 function simonInput(color) {
   const s = simon;
   if (!s || s.phase !== "echo") return;
-  simonFlash(color, 250);
+  simonFlash(color, ECHO_FLASH_MS);
   if (color !== s.seq[s.pos]) { simonMistake(false); return; }
   s.pos++;
   s.score += 10 * s.tier;
@@ -319,13 +329,13 @@ function simonInput(color) {
     s.phase = "break";
     clearTimeout(s.keyTimer);
     // The SPEED UP callout rides the stretched round break on tier-up rounds.
-    const nextTier = Math.min(4, 1 + Math.floor(s.round / 4));
+    const nextTier = tierForRound(s.round + 1);
     if (nextTier > s.tier) {
       s.els.msg.textContent = "SPEED UP! ×" + nextTier;
-      simonLater(simonNextRound, 1500);
+      simonLater(simonNextRound, TIER_UP_BREAK_MS);
     } else {
       s.els.msg.textContent = "round " + s.round + " cleared";
-      simonLater(simonNextRound, 800);
+      simonLater(simonNextRound, ROUND_BREAK_MS);
     }
   } else {
     simonArmKeyTimeout();
@@ -339,8 +349,8 @@ function simonMistake(timedOut) {
   clearTimeout(s.keyTimer);
   s.els.msg.textContent = (timedOut ? "too slow — " : "wrong pad — ") +
     "it wanted " + expected + " (" + PAD_KEYS[expected] + ")";
-  simonFlash(expected, 1000);
-  simonLater(simonGameOver, 1000);
+  simonFlash(expected, DEATH_FREEZE_MS);
+  simonLater(simonGameOver, DEATH_FREEZE_MS);
 }
 
 function simonGameOver() {
