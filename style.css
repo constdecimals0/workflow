@@ -248,6 +248,7 @@ h1 {
   border-radius: 0 0 6px 0;
 }
 .prompt.shell .prompt-tag { background: var(--hub); }
+.prompt-tag.will { background: var(--yellow); }
 .prompt-tag.inline {
   position: static;
   border-radius: 4px;

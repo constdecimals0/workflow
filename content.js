@@ -1,6 +1,7 @@
 // Step content, adapted from README.md and example/tutorial.md — those files are the
-// source of truth. Prompts are verbatim from the real run; prose is adapted for the
-// click-through medium.
+// source of truth. Prompts tagged "you type" are verbatim from the real run; prompts
+// tagged "you'll type" are recommended forms the run never typed as shown. Prose is
+// adapted for the click-through medium.
 //
 // color: which pad accents the step — green (Chart), red (Decide), yellow (Plan),
 // blue (Build), all (Close), hub (neutral).
@@ -33,10 +34,13 @@ const STEPS = [
   title: "Everything here happened",
   color: "hub",
   body: `
-    <p>This is a <strong>prompt-along walkthrough</strong>. Every prompt you'll be shown was
-    typed in the real run, captured verbatim in the
-    <a href="${GH}/blob/main/context/example-run-log.md">run log</a>. Where the run hit
-    friction, the walkthrough says so instead of hiding it — the consolidated lessons live in
+    <p>This is a <strong>prompt-along walkthrough</strong>. Every prompt tagged
+    <span class="prompt-tag inline">you type</span> was typed in the real run, captured
+    verbatim in the <a href="${GH}/blob/main/context/example-run-log.md">run log</a> (the log
+    presents the run normalized to 18 sessions; this walkthrough's 15 are the run's real
+    shape). Prompts tagged <span class="prompt-tag inline will">you'll type</span> are the
+    recommended form — the run never typed them as shown. Where the run hit friction, the
+    walkthrough says so instead of hiding it — the consolidated lessons live in
     the <a href="${GH}/blob/main/context/run-retrospective.md">run retrospective</a>, cited
     throughout as <em>Retro rule N</em>.</p>
     <p>Three things you'll practice:</p>
@@ -63,21 +67,24 @@ const STEPS = [
   body: `
     <ol class="setup">
       <li><strong>Install the v1.1 skills:</strong>
-        <div class="prompt shell"><span class="prompt-tag">shell</span><button class="copy">copy</button><pre><code>npx skills add mattpocock/skills</code></pre></div>
+        <div class="prompt shell"><span class="prompt-tag">shell</span><button class="copy">copy</button><pre><code>npx skills@latest add mattpocock/skills</code></pre></div>
+        The installer is an interactive picker — make sure you select
+        <code>/setup-matt-pocock-skills</code>.
       </li>
-      <li><strong>Delete lingering pre-1.1 skills</strong> — <code>review</code>,
-      <code>to-prd</code>, <code>to-issues</code> (keep <code>grill-me</code>, the current
-      v1.1 wrapper). Remove both the <code>~/.claude/skills/</code> symlink and its
-      <code>~/.agents/skills/</code> target. The stale <code>review</code> is the dangerous
-      one: its trigger description is identical to <code>code-review</code>'s, so a generic
-      "review this branch" can silently run the old skill.</li>
+      <li><strong>Only if this machine had a pre-1.1 install:</strong> delete the lingering
+      skills — <code>review</code>, <code>to-prd</code>, <code>to-issues</code> (keep
+      <code>grill-me</code>, the current v1.1 wrapper). Remove both the
+      <code>~/.claude/skills/</code> symlink and its <code>~/.agents/skills/</code> target.
+      The stale <code>review</code> is the dangerous one: its trigger description is
+      identical to <code>code-review</code>'s, so a generic "review this branch" can silently
+      run the old skill. On a fresh machine there is nothing to delete.</li>
       <li><strong>Rust toolchain</strong>, stable ≥ 1.88, if you're following the Simon Says
       example (its manifest pins <code>rust-version = "1.88"</code>).</li>
       <li><strong><code>gh</code> authenticated</strong> against a GitHub repo with issues
       enabled — the workflow uses issues as its tracker: the map, its tickets, the spec, and
       the implementation tickets all live there.</li>
       <li><strong>Once per repo, before any loop:</strong>
-        <div class="prompt"><span class="prompt-tag">you type</span><button class="copy">copy</button><pre><code>/setup-matt-pocock-skills</code></pre></div>
+        <div class="prompt"><span class="prompt-tag will">you'll type</span><button class="copy">copy</button><pre><code>/setup-matt-pocock-skills</code></pre></div>
         wires up the issue tracker, triage labels, and domain-docs layout.</li>
     </ol>
   `
@@ -97,7 +104,7 @@ const STEPS = [
       <tbody>
         <tr class="tint-green"><td>1. Chart</td><td><code>/wayfinder &lt;your idea&gt;</code></td><td>one session; stops once the map exists</td></tr>
         <tr class="tint-red"><td>2. Decide</td><td><code>/wayfinder &lt;ticket name&gt;</code>, per map ticket</td><td>one ticket per session</td></tr>
-        <tr class="tint-yellow"><td>3. Plan</td><td><code>/to-spec</code> then <code>/to-tickets</code></td><td>one session, back-to-back</td></tr>
+        <tr class="tint-yellow"><td>3. Plan</td><td><code>/to-spec &lt;map-url&gt;</code> then <code>/to-tickets</code></td><td>one session, back-to-back</td></tr>
         <tr class="tint-blue"><td>4. Build</td><td><code>/implement &lt;ticket-url&gt;</code></td><td>one ticket per session</td></tr>
         <tr class="tint-blue"><td>5. Review</td><td><code>/code-review</code></td><td>same session as Build — never <code>/clear</code> between</td></tr>
         <tr class="tint-all"><td>6. Close</td><td>a close-out prompt you type yourself</td><td>one session</td></tr>
@@ -114,10 +121,11 @@ const STEPS = [
   color: "green",
   body: `
     <p><strong>Entry is always <code>/wayfinder</code> — even for work you suspect is
-    small.</strong> Its no-fog hatch detects the small case and drops straight into
-    <code>/to-spec</code> in the same session; don't pre-judge size yourself.
-    (<code>/grill-with-docs</code> is a shortcut for work you <em>already know</em> is
-    small.)</p>
+    small.</strong> Its no-fog hatch detects the small case, then <strong>stops and
+    asks</strong> how you'd like to proceed — the move is answering "go straight to
+    <code>/to-spec</code>", which runs on the grilling still in context; don't pre-judge
+    size yourself. (<code>/grill-with-docs</code> is a shortcut for work you
+    <em>already know</em> is small.)</p>
     <p>Anything with real open questions gets a <strong>map</strong>: an issue whose child
     tickets are the decisions to make. Charting is one session; it stops when the map and its
     tickets exist.</p>
@@ -148,8 +156,8 @@ const STEPS = [
   title: "Plan",
   color: "yellow",
   body: `
-    <p><strong>Map done → fresh session.</strong> <code>/to-spec</code> rebuilds from the
-    completed map and publishes the spec as <code>ready-for-agent</code>;
+    <p><strong>Map done → fresh session.</strong> <code>/to-spec &lt;map-url&gt;</code>
+    builds the spec from the completed map and publishes it as <code>ready-for-agent</code>;
     <code>/to-tickets</code> in the <strong>same session</strong> breaks it into
     implementation tickets chained with blocking edges.</p>
     <p>When you approve the breakdown, planning is over — <code>/clear</code>.
@@ -178,8 +186,9 @@ const STEPS = [
   body: `
     <p><strong>Same session as Build — never <code>/clear</code> between implement and
     review.</strong> Type <code>/code-review</code>: two review axes run as parallel agents,
-    <strong>spec</strong> against the ticket and <strong>standards</strong> against the ADRs
-    and <code>CONTEXT.md</code>.</p>
+    <strong>spec</strong> against the ticket and <strong>standards</strong> against whatever
+    documents how code should be written — here, the ADRs and <code>CONTEXT.md</code> — plus
+    an always-on baseline of twelve classic Fowler code smells.</p>
     <p>Verify the findings rather than blindly accepting them, fix the real ones
     <strong>pre-commit</strong>, and commit green. Then <strong>close the ticket with a
     comment linking the commit and verify it shows closed</strong> — an unpushed
@@ -195,7 +204,7 @@ const STEPS = [
   body: `
     <p><strong>Frontier empty means the feature is done.</strong> No skill does this; you
     type it:</p>
-    <div class="prompt"><span class="prompt-tag">you type</span><button class="copy">copy</button><pre><code>All tickets under spec #N are closed — run the loop's close-out: close the spec and the map with comments linking the commits, and prune any prototypes and the effort's .scratch/.</code></pre></div>
+    <div class="prompt"><span class="prompt-tag will">you'll type</span><button class="copy">copy</button><pre><code>All tickets under spec #N are closed — run the loop's close-out: close the spec and the map with comments linking the commits, and prune any prototypes and the effort's .scratch/.</code></pre></div>
     <p>That's also the between-loops cleanup: spec and map closed, prototypes and the
     effort's scratch space deleted. <code>CONTEXT.md</code> and <code>docs/adr/</code> are
     <strong>never</strong> cleaned up — domain docs accumulate across loops by design.</p>
@@ -211,13 +220,16 @@ const STEPS = [
   body: `
     <p>Theory done. The rest of this walkthrough replays the run that built the
     <a href="${GH}/tree/main/example/app">Simon Says terminal game</a> — one full loop,
-    session by session, every prompt verbatim.</p>
+    session by session, replayed prompts verbatim.</p>
     <p>How to read what follows:</p>
     <ul>
       <li>Blocks tagged <span class="prompt-tag inline">you type</span> are exactly what was
       typed, word for word. Copy them freely.</li>
-      <li>Each session is a fresh context — the board-flash <code>── /clear ──</code> beats
-      mark every boundary, and <em>only</em> the boundaries.</li>
+      <li>Blocks tagged <span class="prompt-tag inline will">you'll type</span> are the
+      recommended form — the run never typed them as shown.</li>
+      <li>Each session is a fresh context — a board-flash <code>── /clear ──</code> beat
+      marks each session boundary at a card break; cards that compress several sessions say
+      so.</li>
       <li><strong>What our run did</strong> callouts report the real outcome, including the
       divergences.</li>
     </ul>
@@ -260,9 +272,11 @@ const STEPS = [
   body: `
     <p>The <strong>frontier</strong> is the map's open, unblocked, unclaimed tickets. Work
     them one per session, <code>/clear</code> between — our run carried seven tickets this
-    way with no context trouble (<em>Retro rule 6</em>).</p>
-    <p>You can run frontier tickets in parallel terminals, but there's a friction story
-    coming first.</p>
+    way with no context trouble (<em>Retro rule 6</em>), packing them into six numbered
+    slots by running terminals in parallel: the AFK research ticket worked alongside the
+    first grilling.</p>
+    <p>You can run frontier tickets in parallel too, but there's a friction story coming
+    first.</p>
     <p class="hint">The map dealt five tickets: 1 research · 3 grilling · 1 prototype — plus
     two more that graduated out of the fog along the way.</p>
   `
@@ -278,7 +292,7 @@ const STEPS = [
 - Grilling: core game rules
 - Grilling: high-score persistence</code></pre></div>
     <p>(The run pasted the frontier list from session 1's closing summary — naming what's
-    takeable.) The agent chains into <code>/research</code> and works alone — about 12
+    takeable.) The agent reaches for <code>/research</code> and works alone — about 12
     minutes in our run.</p>
     <div class="callout note"><div class="callout-tag">▶ produced</div>
     <p><a href="${GH}/blob/main/docs/research/ratatui-tick-driven-game.md">docs/research/ratatui-tick-driven-game.md</a>
@@ -290,6 +304,8 @@ const STEPS = [
   kicker: "THE TUTORIAL · SESSIONS 2–7",
   title: "⚠ Friction: the parallel claim race",
   color: "red",
+  clearAfter: true,
+  clearLabel: "fresh terminal, ticket named",
   body: `
     <div class="callout friction"><div class="callout-tag">⚠ what our run did</div>
     <p>Our run opened two more terminals 13 seconds apart, both typing bare
@@ -311,7 +327,8 @@ const STEPS = [
   body: `
     <p>Each grilling ticket is a conversation — one question at a time, you answer, and when
     you confirm shared understanding the agent chains into <code>/domain-modeling</code> to
-    make the decisions durable. Our run's grilling sessions produced:</p>
+    make the decisions durable. Three sessions, compressed into one card — our run's
+    grilling sessions produced:</p>
     <ul>
       <li><strong>Core game rules</strong> — arrow keys, append-one sequences, sudden death,
       per-key timeout, tiered speed-ups, steps × tier scoring. Chained
@@ -377,11 +394,14 @@ const STEPS = [
   clearAfter: true,
   clearLabel: "the canonical clear",
   body: `
-    <p>Map done → <code>/clear</code> → a fresh session that loads the map and turns it into
-    a spec and tickets. Type:</p>
+    <p>Map done → <code>/clear</code> → a fresh session that turns the map into a spec and
+    tickets. The reliable form passes the argument (<em>Retro rule 1</em>):
+    <code>/to-spec &lt;map-url&gt;</code>, so the fresh session builds the spec from the map
+    by instruction. Our run improvised instead and typed it bare:</p>
     <div class="prompt"><span class="prompt-tag">you type</span><button class="copy">copy</button><pre><code>/to-spec</code></pre></div>
-    <p>With no argument and a cleared context, the agent rebuilds from the repo: it finds the
-    completed map and its closed tickets, and synthesizes the spec. Our run produced
+    <p>With no argument and a cleared context, the agent rebuilt from the repo — found the
+    completed map and its closed tickets, and synthesized the spec. Improvisation that held,
+    not designed behavior: pass the map URL. Our run produced
     <a href="${GH}/issues/9">Spec: Simon Says terminal game</a> — 33 user stories, labelled
     <code>ready-for-agent</code>.</p>
     <p>Then, <strong>in the same session</strong>:</p>
@@ -420,7 +440,9 @@ const STEPS = [
     implement and review:</p>
     <div class="prompt"><span class="prompt-tag">you type</span><button class="copy">copy</button><pre><code>/code-review</code></pre></div>
     <p>Two review axes run as parallel agents — spec against the ticket, standards against
-    the ADRs and <code>CONTEXT.md</code>. Fix the real findings pre-commit and commit green
+    whatever documents how code should be written (here, the ADRs and
+    <code>CONTEXT.md</code>), plus an always-on baseline of twelve classic Fowler code
+    smells. Fix the real findings pre-commit and commit green
     (<code>cargo test</code>, <code>clippy -D warnings</code>, <code>fmt --check</code>). Our
     run's session for <a href="${GH}/issues/10">#10</a> did exactly this: the reviews' real
     findings were verified, fixed, and folded into commit <code>c730682</code>.</p>
@@ -479,8 +501,11 @@ const STEPS = [
   clearLabel: "loop complete",
   body: `
     <p>Frontier empty = feature done. No skill closes the loop for you — the close-out is a
-    prompt you type yourself (<em>Retro rule 4</em>):</p>
-    <div class="prompt"><span class="prompt-tag">you type</span><button class="copy">copy</button><pre><code>All tickets under spec #9 are closed — run the loop's close-out: close the spec and the map with comments linking the commits, and prune any prototypes and the effort's .scratch/.</code></pre></div>
+    prompt you type yourself (<em>Retro rule 4</em>). The recommended form:</p>
+    <div class="prompt"><span class="prompt-tag will">you'll type</span><button class="copy">copy</button><pre><code>All tickets under spec #9 are closed — run the loop's close-out: close the spec and the map with comments linking the commits, and prune any prototypes and the effort's .scratch/.</code></pre></div>
+    <p>One honest note: that block is the recommended form, not replayed history — the real
+    run typed bare <code>/wayfinder</code>, and the close-out ran because a map ticket drove
+    it.</p>
     <div class="callout note"><div class="callout-tag">▶ what our run did</div>
     <p>The session closed spec <a href="${GH}/issues/9">#9</a> with a closing comment listing
     the per-ticket commits, then closed map <a href="${GH}/issues/1">#1</a> linking the spec.
@@ -527,7 +552,8 @@ const STEPS = [
     <p>The one rule that outranks the rest: <strong>pass the argument.</strong> Every serious
     friction in the real run traced to a bare invocation letting the agent guess its scope —
     bare <code>/implement</code> grabbed the entire backlog (twice), parallel bare
-    <code>/wayfinder</code> sessions raced for the same ticket. Bare is safe only when the
+    <code>/wayfinder</code> sessions raced for the same ticket (the skill's own convention is
+    map-first — pass the map URL when more than one map is live). Bare is safe only when the
     repo state leaves exactly one thing to do.</p>
     <p>The <a href="${GH}/blob/main/context/run-retrospective.md">retrospective</a>'s
     distilled form — every serious friction in the run traces to breaking one of these:</p>
@@ -549,6 +575,34 @@ const STEPS = [
       the same session as the implementation, <code>/clear</code> on the settled boundaries.
       The run's only failures were departures from this — never the loop itself.</li>
     </ol>
+  `
+},
+{
+  id: "work-repo",
+  kicker: "REFERENCE",
+  title: "On a work repo",
+  color: "hub",
+  body: `
+    <p>This run had the luxury of committing straight to <code>main</code> in a repo built
+    to be looked at. On a real work repo, three things change:</p>
+    <ul>
+      <li><strong>One PR per feature.</strong> Branch at the canonical clear — between
+      <code>/to-tickets</code> and the first <code>/implement</code>. Each implement session
+      commits to the feature branch and still closes its ticket with a comment linking the
+      commit (rule 3 unchanged — <code>Closes</code> trailers only fire at merge). The
+      close-out gains three steps: push, open the PR, merge — then close the spec and the
+      map.</li>
+      <li><strong>Tracker choice.</strong> GitHub Issues is the default — maps and tickets
+      live where the team already looks. If the effort must leave no trace, pick the
+      local-markdown tracker at setup instead: GitHub-tracked maps can't be gitignored, so
+      zero footprint fully applies only on the markdown tracker. Both are native to
+      <code>/setup-matt-pocock-skills</code>.</li>
+      <li><strong>Zero footprint.</strong> Gitignore everything the workflow writes — scratch
+      space, prototype dirs, research notes, domain docs, agent config — and at setup's
+      confirm-and-edit step, steer its agent-skills block into a gitignored local memory
+      file. Complete cleanup is then deleting the ignored paths. The accepted cost: domain
+      docs become local-only, per-machine.</li>
+    </ul>
   `
 },
 {
@@ -579,14 +633,19 @@ const STEPS = [
       <div class="simon-msg" id="simon-msg">press start — watch the sequence, then echo it</div>
       <div class="simon-actions"><button class="btn next" id="simon-start">▶ start run</button></div>
     </div>
-    <p>Run the loop again when the next feature arrives — and go deeper whenever you want:</p>
+    <p><strong>Next stop: <a href="${GH}/blob/main/example/tutorial.md">the tutorial</a></strong>
+    — the same run as a prompt-along read; typing along and rebuilding the game is optional
+    reps, not a prerequisite. Reading ends at the README's
+    <a href="${GH}/blob/main/README.md#on-a-work-repo">On a work repo</a> section (mirrored
+    one card back) — after that, the next step is running the loop on a repo of your own.</p>
+    <p>Go deeper whenever you want:</p>
     <ul>
-      <li><a href="${GH}/blob/main/example/tutorial.md">The tutorial</a> — recreate the Simon
-      Says app prompt-by-prompt.</li>
       <li><a href="${GH}/blob/main/context/run-retrospective.md">The run retrospective</a> —
       every divergence in the real run and what it teaches.</li>
       <li><a href="${GH}/blob/main/context/example-run-log.md">The run log</a> — every prompt
       of all 18 sessions, session by session.</li>
+      <li><a href="${GH}/blob/main/context/skills-review.md">The skills review</a> — the read
+      of the skill texts that motivated the setup steps.</li>
     </ul>
     <p class="provenance">This walkthrough is adapted from
     <a href="${GH}/blob/main/README.md">README.md</a> and
