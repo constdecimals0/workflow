@@ -1,5 +1,6 @@
 /* The Workflow walkthrough — dark arcade theme.
-   Pad colors mirror the Simon Says example: green/red/yellow/blue. */
+   Pad colors mirror the Simon Says example app (ui.rs):
+   Up = green, Down = yellow, Left = red, Right = blue. */
 
 :root {
   --bg: #0a0d13;
@@ -77,15 +78,15 @@ code {
   transition: opacity 120ms ease, box-shadow 120ms ease;
 }
 .pad-up    { grid-area: 1 / 2; background: var(--green); }
-.pad-left  { grid-area: 2 / 1; background: var(--yellow); }
-.pad-right { grid-area: 2 / 3; background: var(--red); }
-.pad-down  { grid-area: 3 / 2; background: var(--blue); }
+.pad-left  { grid-area: 2 / 1; background: var(--red); }
+.pad-right { grid-area: 2 / 3; background: var(--blue); }
+.pad-down  { grid-area: 3 / 2; background: var(--yellow); }
 
 .pad.lit { opacity: 1; }
 .pad-up.lit    { box-shadow: 0 0 14px var(--green); }
-.pad-left.lit  { box-shadow: 0 0 14px var(--yellow); }
-.pad-right.lit { box-shadow: 0 0 14px var(--red); }
-.pad-down.lit  { box-shadow: 0 0 14px var(--blue); }
+.pad-left.lit  { box-shadow: 0 0 14px var(--red); }
+.pad-right.lit { box-shadow: 0 0 14px var(--blue); }
+.pad-down.lit  { box-shadow: 0 0 14px var(--yellow); }
 
 .hub {
   grid-area: 2 / 2;
@@ -423,15 +424,15 @@ td {
   padding: 0;
 }
 .spad-up    { grid-area: 1 / 2; background: var(--green); }
-.spad-left  { grid-area: 2 / 1; background: var(--yellow); }
-.spad-right { grid-area: 2 / 3; background: var(--red); }
-.spad-down  { grid-area: 3 / 2; background: var(--blue); }
+.spad-left  { grid-area: 2 / 1; background: var(--red); }
+.spad-right { grid-area: 2 / 3; background: var(--blue); }
+.spad-down  { grid-area: 3 / 2; background: var(--yellow); }
 
 .spad.lit { opacity: 1; }
 .spad-up.lit    { box-shadow: 0 0 26px var(--green); }
-.spad-left.lit  { box-shadow: 0 0 26px var(--yellow); }
-.spad-right.lit { box-shadow: 0 0 26px var(--red); }
-.spad-down.lit  { box-shadow: 0 0 26px var(--blue); }
+.spad-left.lit  { box-shadow: 0 0 26px var(--red); }
+.spad-right.lit { box-shadow: 0 0 26px var(--blue); }
+.spad-down.lit  { box-shadow: 0 0 26px var(--yellow); }
 
 .simon-hub {
   grid-area: 2 / 2;

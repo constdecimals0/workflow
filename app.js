@@ -13,9 +13,9 @@ const overlay = document.getElementById("clear-overlay");
 const clearSub = document.getElementById("clear-sub");
 const pads = {
   green: document.querySelector(".pad-up"),
-  red: document.querySelector(".pad-right"),
-  yellow: document.querySelector(".pad-left"),
-  blue: document.querySelector(".pad-down"),
+  yellow: document.querySelector(".pad-down"),
+  red: document.querySelector(".pad-left"),
+  blue: document.querySelector(".pad-right"),
 };
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -146,11 +146,11 @@ function back() {
   go(state.i - 1);
 }
 
-nextBtn.addEventListener("click", () => { flashPad("red"); next(); });
-backBtn.addEventListener("click", () => { flashPad("yellow"); back(); });
+nextBtn.addEventListener("click", () => { flashPad("blue"); next(); });
+backBtn.addEventListener("click", () => { flashPad("red"); back(); });
 
-// Arrow keys mirror the game's pad bindings: up/right/down/left = green/red/blue/yellow.
-const ARROW_PADS = { ArrowUp: "green", ArrowRight: "red", ArrowDown: "blue", ArrowLeft: "yellow" };
+// Arrow keys mirror the game's pad bindings: up/down/left/right = green/yellow/red/blue.
+const ARROW_PADS = { ArrowUp: "green", ArrowDown: "yellow", ArrowLeft: "red", ArrowRight: "blue" };
 
 document.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -175,7 +175,7 @@ document.addEventListener("keydown", (e) => {
     back();
   } else if ((e.key === "Enter" || e.key === " ") && !onControl) {
     e.preventDefault();
-    flashPad("red");
+    flashPad("blue");
     next();
   }
 });
@@ -197,13 +197,16 @@ bodyEl.addEventListener("click", (e) => {
 });
 
 // ── Simon mini-game (last step) ───────────────────────────────────────────────
-// The rules mirror the example app: Watch then Echo, sudden death, a 3.0 s
-// per-key timeout, speed tiers every 4 rounds doubling as the score multiplier.
-// High score persists as a localStorage kv pair.
+// Rules and timing mirror the example app (game.rs): Watch then Echo, sudden
+// death, a 3.0 s per-key timeout, speed tiers entering at rounds 1/5/9/13 that
+// double as the score multiplier, the decided watch tempo per tier, an 800 ms
+// round break stretched to 1.5 s on tier-ups carrying the SPEED UP callout,
+// and a 1000 ms get-ready. High score persists as a localStorage kv pair —
+// the browser analogue of the app's XDG high-score file.
 
 const SIMON_KEY = "workflow-simon-high-score";
-const PAD_ORDER = ["green", "red", "yellow", "blue"];
-const PAD_KEYS = { green: "↑", red: "→", yellow: "←", blue: "↓" };
+const PAD_ORDER = ["green", "yellow", "red", "blue"];
+const PAD_KEYS = { green: "↑", yellow: "↓", red: "←", blue: "→" };
 let simon = null;
 
 function simonActive() {
@@ -261,7 +264,8 @@ function simonFlash(color, ms) {
 }
 
 function simonTempo() {
-  return [0, 600, 470, 350, 250][simon.tier];
+  // (flash ms, gap ms) per Speed Tier — game.rs TIER_TEMPO_MS.
+  return [[0, 0], [450, 120], [330, 100], [240, 80], [180, 60]][simon.tier];
 }
 
 function simonArmKeyTimeout() {
@@ -280,34 +284,33 @@ function simonStart() {
   s.els.hub.textContent = "★";
   s.els.msg.textContent = "get ready…";
   simonStats();
-  simonLater(simonNextRound, 900);
+  simonLater(simonNextRound, 1000);
 }
 
 function simonNextRound() {
   const s = simon;
   s.round++;
-  const tier = Math.min(4, 1 + Math.floor((s.round - 1) / 4));
-  const tierUp = tier > s.tier;
-  s.tier = tier;
+  s.tier = Math.min(4, 1 + Math.floor((s.round - 1) / 4));
   s.seq.push(PAD_ORDER[Math.floor(Math.random() * PAD_ORDER.length)]);
   s.pos = 0;
   s.phase = "watch";
   s.els.hub.textContent = s.round;
-  s.els.msg.textContent = tierUp ? "SPEED UP! — watch…" : "watch…";
+  s.els.msg.textContent = "watch…";
   simonStats();
-  const gap = simonTempo();
-  s.seq.forEach((color, n) => simonLater(() => simonFlash(color, gap * 0.6), 500 + n * gap));
+  const [flash, gap] = simonTempo();
+  const step = flash + gap;
+  s.seq.forEach((color, n) => simonLater(() => simonFlash(color, flash), 500 + n * step));
   simonLater(() => {
     s.phase = "echo";
     s.els.msg.textContent = "echo!";
     simonArmKeyTimeout();
-  }, 500 + s.seq.length * gap);
+  }, 500 + s.seq.length * step);
 }
 
 function simonInput(color) {
   const s = simon;
   if (!s || s.phase !== "echo") return;
-  simonFlash(color, 170);
+  simonFlash(color, 250);
   if (color !== s.seq[s.pos]) { simonMistake(false); return; }
   s.pos++;
   s.score += 10 * s.tier;
@@ -315,8 +318,15 @@ function simonInput(color) {
   if (s.pos === s.seq.length) {
     s.phase = "break";
     clearTimeout(s.keyTimer);
-    s.els.msg.textContent = "round " + s.round + " cleared";
-    simonLater(simonNextRound, 900);
+    // The SPEED UP callout rides the stretched round break on tier-up rounds.
+    const nextTier = Math.min(4, 1 + Math.floor(s.round / 4));
+    if (nextTier > s.tier) {
+      s.els.msg.textContent = "SPEED UP! ×" + nextTier;
+      simonLater(simonNextRound, 1500);
+    } else {
+      s.els.msg.textContent = "round " + s.round + " cleared";
+      simonLater(simonNextRound, 800);
+    }
   } else {
     simonArmKeyTimeout();
   }
@@ -329,7 +339,7 @@ function simonMistake(timedOut) {
   clearTimeout(s.keyTimer);
   s.els.msg.textContent = (timedOut ? "too slow — " : "wrong pad — ") +
     "it wanted " + expected + " (" + PAD_KEYS[expected] + ")";
-  simonFlash(expected, 900);
+  simonFlash(expected, 1000);
   simonLater(simonGameOver, 1000);
 }
 
