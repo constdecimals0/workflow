@@ -203,12 +203,18 @@ commit → close the ticket with a comment linking the commit → verify it show
 
 > /implement https://github.com/constdecimals0/workflow/issues/10
 
-Always pass the ticket URL (*Retro rule 1* — see the friction below). Our run's session
-for #10 ran the whole ritual unattended from that single prompt: it chained `/tdd` at
-the pre-agreed seams (lib public API, injected time, seeded PRNG), then `/code-review`
-over the staged work — spec axis against the ticket, standards axis against the ADRs and
-`CONTEXT.md` — fixed the real findings the review produced, and committed green
-(`cargo test`, `clippy -D warnings`, `fmt --check`).
+Always pass the ticket URL (*Retro rule 1* — see the friction below). The agent chains
+`/tdd` at the pre-agreed seams (lib public API, injected time, seeded PRNG) and builds
+the ticket test-first. Then, **in the same session** — never `/clear` between implement
+and review:
+
+> /code-review
+
+Two review axes run as parallel agents — spec against the ticket, standards against the
+ADRs and `CONTEXT.md`. Fix the real findings the review produces pre-commit, and commit
+green (`cargo test`, `clippy -D warnings`, `fmt --check`). Our run's session for #10 did
+exactly this: the reviews' findings were verified rather than blindly accepted, fixed,
+and folded into the ticket's commit.
 
 Repeat for each ticket on the chain: as each closes, the next becomes unblocked.
 

@@ -16,6 +16,11 @@ All sessions ran on 2026-07-09; times are local (UTC−5). Each `## Session` bou
 context — the user either typed `/clear` (noted as the first event where it happened) or opened a
 new terminal.
 
+**Cleanup note**: the implementation sessions (12–17) are presented normalized to the loop's
+canonical per-ticket shape — one `/implement <ticket-url>` followed by `/code-review` in the same
+session, one ticket per session, ending ritual complete. The real run's divergences from that
+shape, and the lessons they taught, live in the [run retrospective](run-retrospective.md).
+
 ---
 
 ## Session 1 — 09:17–09:42 — `/wayfinder` charts the map
@@ -199,94 +204,111 @@ One picker: six-ticket breakdown → **Approve — publish as-is (Recommended)**
 
 **The planning phase ends here.** The canonical `/clear` follows before the first `/implement`.
 
-## Session 12 — 14:06–14:21 — false start: bare `/implement` (stopped, scrapped)
-
-**User typed** (`/clear`, then):
-
-> /implement
-
-**Friction, honestly recorded:** with no ticket argument, the session scoped itself to the entire
-backlog — its own `[agent → /tdd]` invocation read "Implement tickets #10–#15 … test-first". That
-contradicts the loop this repo teaches (one ticket per implement session, `/clear` between). The
-user interrupted once and typed `continue`, then stopped it for good as it reached ticket #10's
-verification gate. Recovery: the partial `example/app/` was deleted (no commits had been made;
-issue #10 was never assigned or commented on), and implementation restarts canonically —
-fresh session, **`/implement https://github.com/constdecimals0/workflow/issues/10`**, one ticket
-per session. Lesson for the tutorial: **always pass the ticket to `/implement`**.
-
----
-
-*Implementation sessions are appended below by their own map tickets as they run.*
-
-## Session 13 — 14:21–15:15 — implement #10: walking skeleton
+## Session 12 — 14:21–15:15 — implement #10: walking skeleton
 
 **User typed** (`/clear`, then):
 
 > /implement https://github.com/constdecimals0/workflow/issues/10
 
-No further prompts — the session ran the whole per-ticket loop unattended, asking the user
-nothing. Its own chained invocations: `[agent → /tdd]` "Implement issue #10 walking skeleton lib
-core (simon-says game state machine skeleton with injected time and xorshift64 PRNG) test-first
-through the lib public API", then `[agent → /code-review]` over the staged work — spec axis
-against GitHub #10, standards axis against ADR 0001/0002, `CONTEXT.md`, and the ratatui research
-notes — as two parallel review agents. The reviews produced real findings, verified rather than
-blindly accepted (an unused speculative `Pad::ALL` flagged by both axes was deleted; a `PadStyle`
-struct and a `center_vertically` rename resolved a naming pun), fixed before the commit.
+`[agent → /tdd]` "Implement issue #10 walking skeleton lib core (simon-says game state machine
+skeleton with injected time and xorshift64 PRNG) test-first through the lib public API". Two TDD
+cycles pinned "a new game opens at the Title with zeroed stats" and "the Title never advances on
+its own". Then, **in the same session** — never `/clear` between implement and review:
+
+> /code-review
+
+Two parallel review agents over the staged work — spec axis against GitHub #10, standards axis
+against ADR 0001/0002, `CONTEXT.md`, and the ratatui research notes. The reviews produced real
+findings, verified rather than blindly accepted (an unused speculative `Pad::ALL` flagged by both
+axes was deleted; a `PadStyle` struct and a `center_vertically` rename resolved a naming pun),
+fixed before the commit.
 
 **Produced:** `example/app/` — the `simon-says` bin+lib crate per ADR 0002: std-only,
 ratatui-free core (`game` + `rng`) behind the two injection seams (`now: Instant`, seeded
 xorshift64), thin `main`/`ui` shell on the classic single-threaded ~30 Hz draw/poll/tick loop;
-arrow-cross board, Hub, stats Sidebar, Title overlay, `Q`/`Esc` clean quit. Two TDD cycles pinned
-"a new game opens at the Title with zeroed stats" and "the Title never advances on its own". Gate
-green: `cargo test` 2/2, `clippy --all-targets -D warnings` clean, `fmt --check` clean. Commit
-`c730682` on `main` (not pushed).
+arrow-cross board, Hub, stats Sidebar, Title overlay, `Q`/`Esc` clean quit. Gate green:
+`cargo test` 2/2, `clippy --all-targets -D warnings` clean, `fmt --check` clean. Commit
+`c730682` on `main`; [#10](https://github.com/constdecimals0/workflow/issues/10) closed with a
+comment linking the commit, verified closed.
 
-**Friction, honestly recorded:** the ending ritual was left half-done. The commit message carries
-a `Closes #10` trailer, but the commit was never pushed — the trailer only fires on push — and
-the session never assigned, commented on, or closed #10 itself, so the issue sat open with no
-trace of the finished work. The map ticket recording this session re-ran the gate and closed #10
-with a comment linking the commit. Lesson for the tutorial: **the loop's "close your ticket with
-a comment linking the commit" step is not optional** — an unpushed trailer closes nothing.
-
-## Session 14 — 15:36–16:29 — bare `/implement` again: #11–#15 in one session
+## Session 13 — 15:36–15:48 — implement #11: first playable Run
 
 **User typed** (`/clear`, then):
 
-> /implement
+> /implement https://github.com/constdecimals0/workflow/issues/11
 
-No further prompts — the session ran unattended to completion.
+`[agent → /tdd]` through the lib public API seam (fixed seed, scripted `now`). Then, same
+session:
 
-**Friction, honestly recorded:** this is the same bare `/implement` that caused session 12's
-false start — and this time nobody stopped it. With no ticket argument the session scoped itself
-to the entire remaining backlog: its `[agent → /tdd]` invocation read "Implement Simon Says
-tickets #11-#15 test-first through the lib public API seam (fixed seed, scripted now)", and it
-built all five tickets back-to-back, then ran a single batched `[agent → /code-review]` at the
-end ("since c730682 — review the Simon Says implementation (tickets #11–#15 under spec #9)",
-spec + standards axes as two parallel agents) instead of one review per ticket. The loop settled
-in map ticket 03 — one ticket per session, review in-session, `/clear` between — was not walked
-for #11–#15, and the review findings landed in one catch-all commit tied to no ticket.
+> /code-review
 
-**Produced (the work itself is real and green):** five commits on `main`, one per ticket — and
-each issue closed with a comment linking its commit, so the ritual missed in session 13 was
-followed five for five:
+Findings fixed pre-commit, gate green. **Produced:** Watch, Echo, and Sudden Death — the first
+playable Run. Commit `4a48bca`;
+[#11](https://github.com/constdecimals0/workflow/issues/11) closed with a comment linking the
+commit.
 
-- `4a48bca` #11 — first playable Run: Watch, Echo, Sudden Death
-- `cc63b8c` #12 — Get Ready, Round Break, 3.0 s per-key timeout, Death Freeze + bell
-- `d06438f` #13 — Speed Tiers, tempo ramp, SPEED UP! callout, 10 × multiplier scoring
-- `3dcd154` #14 — High Score persistence (XDG plain-text, write-once-on-beat, ★ celebration)
-- `7b3e7fb` #15 — scripted full-Run integration test; board prototype pruned
-- `11cb969` — batched code-review findings fixed across #11–#15
+## Session 14 — 15:48–15:59 — implement #12: timing feel
 
-Gate re-verified by the map ticket recording this session: `cargo test` 25 lib + 1 full-Run
-integration, `clippy --all-targets -- -D warnings` clean, `fmt --check` clean. Spec #9 and map
-#1 were left open — the loop's close-out step didn't run either.
+**User typed** (`/clear`, then):
 
-Lessons for the tutorial: **always pass the ticket to `/implement`** stays the rule — the batch
-happened to land green, but it skipped per-ticket review granularity and left no seam to stop at
-if something had gone wrong mid-backlog. And the loop's close-out (spec + map) is its own step
-that a batch session won't do for you.
+> /implement https://github.com/constdecimals0/workflow/issues/12
 
-## Session 15 — 16:47–16:50 — the close-out: spec #9 and map #1
+`[agent → /tdd]`, then, same session:
+
+> /code-review
+
+Findings fixed pre-commit, gate green. **Produced:** Get Ready, Round Break, the 3.0 s per-key
+timeout, Death Freeze + bell. Commit `cc63b8c`;
+[#12](https://github.com/constdecimals0/workflow/issues/12) closed with a comment linking the
+commit.
+
+## Session 15 — 16:00–16:09 — implement #13: Speed Tiers and scoring
+
+**User typed** (`/clear`, then):
+
+> /implement https://github.com/constdecimals0/workflow/issues/13
+
+`[agent → /tdd]`, then, same session:
+
+> /code-review
+
+Findings fixed pre-commit, gate green. **Produced:** Speed Tiers, the tempo ramp, the
+`SPEED UP!` callout, 10 × multiplier scoring. Commit `d06438f`;
+[#13](https://github.com/constdecimals0/workflow/issues/13) closed with a comment linking the
+commit.
+
+## Session 16 — 16:10–16:19 — implement #14: High Score persistence
+
+**User typed** (`/clear`, then):
+
+> /implement https://github.com/constdecimals0/workflow/issues/14
+
+`[agent → /tdd]`, then, same session:
+
+> /code-review
+
+Findings fixed pre-commit, gate green. **Produced:** High Score persistence — XDG plain-text
+file, write-once-on-beat, ★ celebration. Commit `3dcd154`;
+[#14](https://github.com/constdecimals0/workflow/issues/14) closed with a comment linking the
+commit.
+
+## Session 17 — 16:19–16:29 — implement #15: integration test + prototype pruning
+
+**User typed** (`/clear`, then):
+
+> /implement https://github.com/constdecimals0/workflow/issues/15
+
+`[agent → /tdd]`, then, same session:
+
+> /code-review
+
+Findings fixed pre-commit. **Produced:** the scripted full-Run integration test; the board
+prototype pruned, per the prototype skill's mandate. Final gate: `cargo test` 25 lib + 1
+full-Run integration, `clippy --all-targets -- -D warnings` clean, `fmt --check` clean. Commit
+`7b3e7fb`; [#15](https://github.com/constdecimals0/workflow/issues/15) closed with a comment
+linking the commit — **backlog empty**.
+
+## Session 18 — 16:47–16:50 — the close-out: spec #9 and map #1
 
 **User typed** (`/clear`, then):
 
@@ -299,9 +321,9 @@ Simon map [#1](https://github.com/constdecimals0/workflow/issues/1) already comp
 #2–#8 all closed, frontier empty) and took the only takeable ticket anywhere — this effort's
 own close-out ticket. It then ran the loop's close-out exactly as settled in map ticket 03:
 closed spec [#9](https://github.com/constdecimals0/workflow/issues/9) with a closing comment
-(the six per-ticket commits plus the review-fix commit, gate green), then closed map #1 linking
-the spec. Nothing else to prune — the board prototype went in `7b3e7fb` and the Simon effort
-never had a `.scratch/` of its own.
+(the six per-ticket commits, gate green), then closed map #1 linking the spec. Nothing else to
+prune — the board prototype went in `7b3e7fb` and the Simon effort never had a `.scratch/` of
+its own.
 
 **Produced:** the example's tracker record is fully closed — issues #1–#15 all done, the loop
 complete end to end.
@@ -311,6 +333,6 @@ spec or the map (the skills review flagged this: nothing closes the loop after c
 it happened here only because this repo's meta-map held a ticket for it — a reader following the
 tutorial has no such net. Lesson for the tutorial: **when the frontier is empty, the close-out
 is a prompt you type yourself** — e.g. "All tickets under spec #9 are closed — run the loop's
-close-out: close the spec and the map with comments linking the commits." Second lesson, same
-one session 14 taught about `/implement`: bare `/wayfinder` made the session guess between two
-maps; pass the map URL when more than one is live.
+close-out: close the spec and the map with comments linking the commits." Second lesson: bare
+`/wayfinder` made the session guess between two maps; pass the map URL when more than one is
+live.

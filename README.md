@@ -29,7 +29,8 @@ sub-loop inside it. Run the whole loop again when the next feature arrives.
 | 2. Decide | `/wayfinder <ticket name>`, per map ticket | one ticket per session |
 | 3. Plan | `/to-spec` then `/to-tickets` | one session, back-to-back |
 | 4. Build | `/implement <ticket-url>` | one ticket per session |
-| 5. Close | a close-out prompt you type yourself | one session |
+| 5. Review | `/code-review` | same session as Build — never `/clear` between |
+| 6. Close | a close-out prompt you type yourself | one session |
 
 **1. Chart — entry is always `/wayfinder`, even for work you suspect is small.** Its no-fog
 hatch detects the small case and drops straight into `/to-spec` in the same session — don't
@@ -48,13 +49,18 @@ the spec as `ready-for-agent`; `/to-tickets` in the **same session** breaks it i
 implementation tickets chained with blocking edges. When you approve the breakdown, planning is
 over — `/clear`. **This is the canonical clear**, the one boundary the skills themselves name.
 
-**4. Build — per ticket, fresh session.** A single `/implement <ticket-url>` runs the whole
-ritual unattended: TDD at the seams the spec agreed, `/code-review` in the same session, findings
-fixed pre-commit, commit green. Then **close the ticket with a comment linking the commit and
-verify it shows closed** — an unpushed `Closes` trailer closes nothing — and `/clear`. As each
-ticket closes, the next unblocks.
+**4. Build — per ticket, fresh session.** `/implement <ticket-url>` builds the ticket test-first
+— TDD at the seams the spec agreed. Always pass the ticket URL; a bare `/implement` will guess
+its scope. When the build lands, don't commit and don't `/clear` — the review comes first, in
+the same session.
 
-**5. Close out — frontier empty means the feature is done.** No skill does this; you type it:
+**5. Review — same session as Build, never `/clear` between.** Type `/code-review`: spec axis
+against the ticket, standards axis against the ADRs and `CONTEXT.md`. Fix the real findings
+pre-commit, commit green. Then **close the ticket with a comment linking the commit and verify
+it shows closed** — an unpushed `Closes` trailer closes nothing — and `/clear`. As each ticket
+closes, the next unblocks.
+
+**6. Close out — frontier empty means the feature is done.** No skill does this; you type it:
 
 > All tickets under spec #N are closed — run the loop's close-out: close the spec and the map
 > with comments linking the commits, and prune any prototypes and the effort's `.scratch/`.
@@ -93,4 +99,4 @@ rules, with the receipts, are in the [run retrospective](context/run-retrospecti
 - **[The tutorial](example/tutorial.md)** — recreate the Simon Says app prompt-by-prompt.
 - **[The run retrospective](context/run-retrospective.md)** — every divergence in the real run
   and what it teaches.
-- **[The run log](context/example-run-log.md)** — every prompt of all 15 sessions, verbatim.
+- **[The run log](context/example-run-log.md)** — every prompt of all 18 sessions, session by session.
