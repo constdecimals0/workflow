@@ -1,8 +1,12 @@
 # Example run retrospective — Simon Says loop
 
-Consolidates the friction and divergences of the full example run — sessions 1–15 in
-[context/example-run-log.md](example-run-log.md) — into the one record that the
-[tutorial](../example/tutorial.md) and the root [README](../README.md) cite. The yardstick
+Consolidates the friction and divergences of the full example run — numbered here in its **real
+15-session shape** — into the one record that the
+[tutorial](../example/tutorial.md) and the root [README](../README.md) cite. (**Numbering note**:
+the [run log](example-run-log.md) presents the same run with implementation normalized to the
+canonical per-ticket shape — sessions 12–17 plus close-out 18. This retrospective numbers what
+really happened: implementation in sessions 12–14, close-out 15. Both numberings are kept on
+purpose — real here, canonical there; sessions 1–11 coincide.) The yardstick
 throughout is the loop settled by the README effort's map ticket "Settle the canonical loop to
 teach" (its `/clear` table appears in both the tutorial and the README); that ticket named this
 retrospective as the thing that may revise it. (The effort's map lived on the local-markdown
@@ -36,7 +40,7 @@ only when the repo state leaves exactly one thing to do.
   [#8](https://github.com/constdecimals0/workflow/issues/8)) exactly as designed.
 - **One ticket per session, `/clear` between** carried seven planning tickets across sessions
   2–9 with no context trouble.
-- **The map → spec joint held.** The skills review called wayfinder → `/to-spec` the suite's
+- **The map → spec joint held.** The [skills review](skills-review.md) called wayfinder → `/to-spec` the suite's
   fuzziest hand-off; in practice a fresh session typing bare `/to-spec` rebuilt everything from
   the repo (completed map, closed tickets) and produced the 33-story spec
   [#9](https://github.com/constdecimals0/workflow/issues/9).
@@ -103,7 +107,7 @@ optional, and a trailer is not a substitute — verify the issue actually shows 
 
 ### 5. The close-out has no skill (session 15)
 
-Nothing in the flow set closes the spec or the map — the skills review flagged the gap
+Nothing in the flow set closes the spec or the map — the [skills review](skills-review.md) flagged the gap
 ("nothing closes the loop after code-review"), and session 14 confirmed it by leaving spec #9
 and map #1 open. The close-out ran only because this repo's meta-map held a ticket for it; a
 reader has no such net.

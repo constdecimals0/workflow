@@ -8,7 +8,7 @@ Primary-source review of the skill files installed under `/Users/coachchucksol/.
 - Two hand-offs are **same-session by construction**: grilling → `to-spec` (to-spec synthesizes "the current conversation" and must not interview), and `implement` → `code-review` (implement invokes it before committing).
 - One hand-off exists **only in the changelog**: wayfinder → spec. The `wayfinder` skill text never names `/to-spec`; the changelog says "take this map and turn it into a spec the regular way."
 - No skill says what happens **after** `code-review` — the loop restart (next ticket, fresh session) is implied by `to-tickets`' closing line, not stated anywhere as a cycle.
-- The changelog instructs removing lingering old skills after migration (`context/v1.1.md:17`). Three pre-1.1 leftovers are still installed: `to-prd`, `to-issues`, and — found during this review — `review`, a pre-smell-baseline copy of `code-review` that is **model-invocable with a description identical to `code-review`'s**, making it the only leftover that can actually be invoked by mistake. `grill-me` turns out to be v1.1-current, not a leftover.
+- The changelog instructs removing lingering old skills after migration (`context/v1.1.md:17`). Three pre-1.1 leftovers were still installed when this review ran: `to-prd`, `to-issues`, and — found during this review — `review`, a pre-smell-baseline copy of `code-review` that was **model-invocable with a description identical to `code-review`'s**, making it the only leftover that could actually be invoked by mistake. All three have since been deleted, per the setup step this review motivated. `grill-me` turns out to be v1.1-current, not a leftover.
 
 ---
 
@@ -142,21 +142,21 @@ Sources: `/Users/coachchucksol/.claude/skills/setup-matt-pocock-skills/SKILL.md`
 
 The changelog's migration instruction, verbatim: "This gives you the freedom to pick and choose which skills you want. Once done, go through your skills folder and make sure no old skills are lingering." (`context/v1.1.md:17`) And in What to Watch For: "**`/to-spec` replaces `/to-prd`** – Update any processes or documentation" and "**`/to-tickets` replaces `/to-plan` and `/to-issues`** – These are now unified" (`context/v1.1.md:231-232`).
 
-### to-prd (leftover — remove)
+### to-prd (leftover — since removed)
 
-`/Users/coachchucksol/.claude/skills/to-prd/SKILL.md` is `to-spec` verbatim with "spec" → "PRD" (same seam step, same template, same "Apply the `ready-for-agent` triage label" at line 19). `disable-model-invocation: true` on both, so the model can't auto-pick the wrong one — the risk is a user typing `/to-prd` from habit. The artifact space **fully overlaps**: both publish a `ready-for-agent` document to the same tracker, and `code-review` step 2 searches for "A PRD/spec file" and issue references without distinguishing, so a stray PRD issue is indistinguishable from a spec. Duplication, not contradiction.
+`/Users/coachchucksol/.claude/skills/to-prd/SKILL.md` was `to-spec` verbatim with "spec" → "PRD" (same seam step, same template, same "Apply the `ready-for-agent` triage label" at line 19). `disable-model-invocation: true` on both, so the model couldn't auto-pick the wrong one — the risk was a user typing `/to-prd` from habit. The artifact space **fully overlapped**: both published a `ready-for-agent` document to the same tracker, and `code-review` step 2 searches for "A PRD/spec file" and issue references without distinguishing, so a stray PRD issue would be indistinguishable from a spec. Duplication, not contradiction.
 
-### to-issues (leftover — remove)
+### to-issues (leftover — since removed)
 
-`/Users/coachchucksol/.claude/skills/to-issues/SKILL.md` is `to-tickets` minus three v1.1 additions: no local `tickets.md` mode, no wide-refactor expand–contract exception (to-tickets SKILL.md:40), and — most important for the loop — **no closing hand-off line**. `to-issues` ends at "Do NOT close or modify any parent issue." (SKILL.md:84); it never mentions `/implement` or clearing context. Both are `disable-model-invocation: true` and both publish `ready-for-agent` issues to the same tracker, so a habitual `/to-issues` produces near-identical artifacts but silently drops the per-ticket session-boundary instruction. Duplication plus a lost hand-off, not contradiction.
+`/Users/coachchucksol/.claude/skills/to-issues/SKILL.md` was `to-tickets` minus three v1.1 additions: no local `tickets.md` mode, no wide-refactor expand–contract exception (to-tickets SKILL.md:40), and — most important for the loop — **no closing hand-off line**. `to-issues` ended at "Do NOT close or modify any parent issue." (SKILL.md:84); it never mentioned `/implement` or clearing context. Both were `disable-model-invocation: true` and both published `ready-for-agent` issues to the same tracker, so a habitual `/to-issues` produced near-identical artifacts but silently dropped the per-ticket session-boundary instruction. Duplication plus a lost hand-off, not contradiction.
 
 ### grill-me (NOT a leftover — keep)
 
 Despite the suspicion, the installed `grill-me` is the v1.1 thin wrapper ("Run a `/grilling` session.") matching the changelog's architecture note that `/grill-me` and `/grill-with-docs` "rely on a central reference grilling skill" (`context/v1.1.md:47-48`). It's `disable-model-invocation: true`, so it can't collide with the model-invocable `grilling` on trigger descriptions. No shadowing.
 
-### review (undocumented fourth leftover — remove; found during this audit)
+### review (undocumented fourth leftover — since removed; found during this audit)
 
-`/Users/coachchucksol/.claude/skills/review/SKILL.md` is a pre-smell-baseline copy of `code-review`: `diff` shows it identical except the name and the entire Fowler smell baseline (code-review SKILL.md:38-57) plus the smell-aware sub-agent brief, which `review` lacks. Unlike `to-prd`/`to-issues`, **both `review` and `code-review` are model-invocable and their `description` frontmatter is word-for-word identical**, so on any "review this branch" request the model may invoke the stale `review` and silently skip the smell baseline — the one v1.1 feature the changelog calls "outrageously useful" (`context/v1.1.md:137`). `implement` says "use /code-review" by name, which disambiguates that path, but direct user requests are a coin flip. This is the only leftover with genuine trigger shadowing.
+`/Users/coachchucksol/.claude/skills/review/SKILL.md` was a pre-smell-baseline copy of `code-review`: `diff` showed it identical except the name and the entire Fowler smell baseline (code-review SKILL.md:38-57) plus the smell-aware sub-agent brief, which `review` lacked. Unlike `to-prd`/`to-issues`, **both `review` and `code-review` were model-invocable and their `description` frontmatter was word-for-word identical**, so on any "review this branch" request the model could invoke the stale `review` and silently skip the smell baseline — the one v1.1 feature the changelog calls "outrageously useful" (`context/v1.1.md:137`). `implement` says "use /code-review" by name, which disambiguated that path, but direct user requests were a coin flip. This was the only leftover with genuine trigger shadowing.
 
 ---
 

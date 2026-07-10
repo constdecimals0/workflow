@@ -18,8 +18,10 @@ new terminal.
 
 **Cleanup note**: the implementation sessions (12–17) are presented normalized to the loop's
 canonical per-ticket shape — one `/implement <ticket-url>` followed by `/code-review` in the same
-session, one ticket per session, ending ritual complete. The real run's divergences from that
-shape, and the lessons they taught, live in the [run retrospective](run-retrospective.md).
+session, one ticket per session, ending ritual complete — with the close-out as session 18. The
+real run reached the same six tickets in three implementation sessions and closed out in its
+session 15; the [run retrospective](run-retrospective.md) records that **real 15-session shape**
+and the lessons its divergences taught. Sessions 1–11 are numbered the same in both documents.
 
 ---
 
@@ -29,7 +31,7 @@ shape, and the lessons they taught, live in the [run retrospective](run-retrospe
 
 > /wayfinder I want a small, fun Simon Says game that runs in the terminal, written in Rust, living in example/app/ of this repo
 
-`[agent → /grilling]` to pin down the destination. The user answered nine picker questions
+`[agent → /grilling]` to pin down the destination. The user answered eight picker questions
 (chosen answers verbatim):
 
 1. What does "the way is clear" look like? → **Design locked, ready for /to-spec (Recommended)**
